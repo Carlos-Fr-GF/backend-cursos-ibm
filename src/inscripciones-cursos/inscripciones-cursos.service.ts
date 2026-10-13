@@ -387,7 +387,7 @@ export class InscripcionesCursosService {
 
     if (await query.getOne()) {
       throw new ConflictException(
-        'La persona ya esta inscrita en este curso con el correo proporcionado',
+        'alguien ya esta inscrito con el correo proporcionado',
       );
     }
   }

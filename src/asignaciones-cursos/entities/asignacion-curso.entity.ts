@@ -11,7 +11,7 @@ export class AsignacionCurso {
   @Column({ name: 'id_nivel', type: 'int' })
   idNivel!: number;
 
-  @Column({ name: 'subnivel', type: 'int', nullable: true })
+  @Column({ name: 'id_subnivel', type: 'int', nullable: true })
   subnivel!: number | null;
 
   @Column({ name: 'dependencias', type: 'int', nullable: true })
