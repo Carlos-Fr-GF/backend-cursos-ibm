@@ -8,8 +8,8 @@ export class InscripcionCurso {
   @Column({ name: 'id_curso', type: 'int' })
   idCurso!: number;
 
-  @Column({ name: 'curp', type: 'varchar', length: 18, nullable: true })
-  curp!: string | null;
+  @Column({ name: 'id_datos_personales', type: 'int' })
+  idDatosPersonales!: number;
 
   @Column({ name: 'nivel', type: 'int' })
   nivel!: number;
@@ -19,4 +19,11 @@ export class InscripcionCurso {
 
   @Column({ name: 'dependencia', type: 'int', nullable: true })
   dependencia!: number | null;
+
+  @Column({
+    name: 'fecha_registro',
+    type: 'date',
+    default: () => 'CURRENT_DATE',
+  })
+  fechaRegistro!: string;
 }

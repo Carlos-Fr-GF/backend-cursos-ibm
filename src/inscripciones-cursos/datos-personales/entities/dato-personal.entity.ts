@@ -1,9 +1,16 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Cargo } from '../../../cargos/entities/cargo.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity('datos_personales')
 export class DatoPersonal {
-  @PrimaryColumn({ name: 'curp', type: 'varchar', length: 18 })
-  curp!: string;
+  @PrimaryGeneratedColumn({ name: 'id_datos_personales', type: 'int' })
+  idDatosPersonales!: number;
 
   @Column({ name: 'cct', type: 'varchar', length: 10, nullable: true })
   cct!: string | null;
@@ -22,4 +29,14 @@ export class DatoPersonal {
 
   @Column({ name: 'correo', type: 'varchar', length: 50, nullable: true })
   correo!: string | null;
+
+  @Column({ name: 'id_cargo', type: 'int', nullable: true })
+  idCargo!: number | null;
+
+  @ManyToOne(() => Cargo, (cargo) => cargo.datosPersonales, {
+    nullable: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'id_cargo', referencedColumnName: 'idCargo' })
+  cargo!: Cargo | null;
 }

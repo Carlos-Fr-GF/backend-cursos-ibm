@@ -13,6 +13,8 @@ import { DependenciasModule } from './dependencias/dependencias.module';
 import { CursosModule } from './cursos/cursos.module';
 import { AsignacionesCursosModule } from './asignaciones-cursos/asignaciones-cursos.module';
 import { InscripcionesCursosModule } from './inscripciones-cursos/inscripciones-cursos.module';
+import { CargosModule } from './cargos/cargos.module';
+import { SubnivelesModule } from './subniveles/subniveles.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { InscripcionesCursosModule } from './inscripciones-cursos/inscripciones-
     CursosModule,
     AsignacionesCursosModule,
     InscripcionesCursosModule,
+    CargosModule,
+    SubnivelesModule,
   ],
 
   controllers: [AppController],

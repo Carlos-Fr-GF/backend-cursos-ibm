@@ -1,8 +1,53 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { CreateDatoPersonalDto } from '../datos-personales/dto/create-dato-personal.dto';
+import {
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  Max,
+  MaxLength,
+  Min,
+  IsString,
+} from 'class-validator';
 
-export class CreateInscripcionCursoDto extends CreateDatoPersonalDto {
+export class CreateInscripcionCursoDto {
+  @IsEmail()
+  @IsNotEmpty()
+  @MaxLength(50)
+  correo!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  idCargo?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  cct?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  escuela?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  nombre?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  apPaterno?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  amMaterno?: string | null;
+
   @Type(() => Number)
   @IsInt()
   @Min(1)

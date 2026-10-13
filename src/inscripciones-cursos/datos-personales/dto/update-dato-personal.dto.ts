@@ -1,4 +1,13 @@
-import { IsEmail, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsEmail,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class UpdateDatoPersonalDto {
   @IsOptional()
@@ -30,4 +39,11 @@ export class UpdateDatoPersonalDto {
   @IsEmail()
   @MaxLength(50)
   correo?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  idCargo?: number | null;
 }

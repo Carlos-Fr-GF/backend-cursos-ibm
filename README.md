@@ -192,45 +192,87 @@ Body parcial de `PATCH /dependencias/:id`:
 
 `idNivel` debe corresponder a un nivel existente.
 
+### Cargos
+
+El catálogo `cat_cargo` administra los cargos disponibles. La columna de texto
+se llama `cargo` en la base de datos. Cada registro de datos personales puede
+asociarse opcionalmente con un cargo mediante `datos_personales.id_cargo`; la
+FK apunta a `cat_cargo.id_cargo`. Al crear o actualizar datos personales, el
+backend comprueba que el cargo exista. Los endpoints de escritura indican JWT
+por cookie y `RolesGuard` con rol `0` (anotaciones comentadas en el controlador).
+Como TypeORM no sincroniza el esquema automáticamente, aplica una vez estos
+cambios en MySQL:
+
+| Método   | Ruta          | Protección                                 | Función                        |
+| -------- | ------------- | ------------------------------------------ | ------------------------------ |
+| `GET`    | `/cargos`     | 🔓 Ninguna                                 | Lista los cargos.              |
+| `GET`    | `/cargos/:id` | 🔓 Ninguna                                 | Obtiene un cargo por ID.       |
+| `POST`   | `/cargos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Crea un cargo.                 |
+| `PATCH`  | `/cargos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza el nombre del cargo. |
+| `DELETE` | `/cargos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina un cargo.              |
+
+Body de `POST /cargos`:
+
+```json
+{
+  "cargo": "Docente"
+}
+```
+
+`cargo` es obligatorio y acepta hasta 45 caracteres. Body parcial de
+`PATCH /cargos/:id`:
+
+```json
+{
+  "cargo": "Director"
+}
+```
+
 ### Inscripciones y datos personales
 
 Los datos personales y las inscripciones están organizados juntos bajo el
 módulo de inscripciones porque comparten el flujo de registro. Se mantienen
-como submódulos separados y las rutas públicas existentes no cambian.
+como submódulos separados. `datos_personales` usa `id_datos_personales`
+autoincremental como clave primaria; conserva CCT, escuela, nombre, apellidos y
+correo. `inscripciones_cursos.id_datos_personales` debe ser entero y referenciar
+esa clave primaria mediante una FK.
 
 Las rutas de lectura y creación no tienen guard indicado. Para edición y
-eliminación se indica JWT por cookie y `RolesGuard` con rol `0`. La CURP es la
-clave primaria, se normaliza a mayúsculas y no se cambia en `PATCH`.
+eliminación se indica JWT por cookie y `RolesGuard` con rol `0`.
 
-| Método   | Ruta                      | Protección                                 | Función                                        |
-| -------- | ------------------------- | ------------------------------------------ | ---------------------------------------------- |
-| `GET`    | `/datos-personales`       | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista los registros personales.                |
-| `GET`    | `/datos-personales/:curp` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene el registro identificado por CURP.     |
-| `POST`   | `/datos-personales`       | 🔓 Ninguna                                 | Crea un registro personal.                     |
-| `PATCH`  | `/datos-personales/:curp` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente los datos del registro. |
-| `DELETE` | `/datos-personales/:curp` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina el registro.                           |
+| Método   | Ruta                    | Protección                                 | Función                                          |
+| -------- | ----------------------- | ------------------------------------------ | ------------------------------------------------ |
+| `GET`    | `/datos-personales`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista los registros personales.                  |
+| `GET`    | `/datos-personales/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene el registro por su ID autoincremental.   |
+| `POST`   | `/datos-personales`     | 🔓 Ninguna                                 | Crea un registro; la base de datos genera su ID. |
+| `PATCH`  | `/datos-personales/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente los datos del registro.   |
+| `DELETE` | `/datos-personales/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina el registro identificado por ID.         |
 
 Body de `POST /datos-personales`:
 
 ```json
 {
-  "curp": "PEGJ800101HDFRRN09",
   "cct": "09ABC0001A",
   "escuela": "Escuela de ejemplo",
   "nombre": "Juan",
   "apPaterno": "Pérez",
   "amMaterno": "García",
-  "correo": "juan.perez@ejemplo.com"
+  "correo": "juan.perez@ejemplo.com",
+  "idCargo": 1
 }
 ```
 
-`curp` es obligatoria y debe tener 18 caracteres. Los demás campos son
-opcionales. Body parcial de `PATCH /datos-personales/:curp`:
+Todos los campos del body son opcionales. `idCargo` debe corresponder a un
+cargo existente o enviarse como `null`. `id_datos_personales` lo genera la
+base de datos y aparece en la respuesta, junto con la información del cargo
+asociado cuando existe. Body parcial de
+`PATCH /datos-personales/:id`:
 
 ```json
 {
   "escuela": "Nueva escuela",
-  "correo": "juan.nuevo@ejemplo.com"
+  "correo": "juan.nuevo@ejemplo.com",
+  "idCargo": null
 }
 ```
 
@@ -270,11 +312,28 @@ formato `YYYY-MM-DD`. Body parcial de `PATCH /cursos/:id`:
 }
 ```
 
+`cuposMax` no puede reducirse por debajo de la suma de los cupos base asignados
+a los niveles del curso.
+
 ### Asignaciones de cursos
 
 Todas las rutas indican JWT por cookie y `RolesGuard` con rol `0`. Se comprueba
-que el curso y el nivel existan antes de crear o cambiar su asignación. Los
-valores de subnivel y dependencia son identificadores opcionales externos.
+que el curso y el nivel existan antes de crear o cambiar su asignación.
+`subnivel`, si se proporciona, debe ser un ID existente del catálogo local y
+pertenecer al mismo nivel; `dependencias` es un identificador externo opcional.
+Cada asignación debe tener un cupo igual o inferior a `cursos.cupos_max`. La
+suma de los cupos de las asignaciones base (sin subnivel ni dependencia) no
+puede superar ese máximo del curso. Las asignaciones de subnivel son cupos
+incluidos en el cupo base de su nivel: su suma no puede excederlo y no se suman
+de nuevo al límite global del curso. No se puede reducir el cupo base por
+debajo de los cupos ya asignados a sus subniveles; primero debe existir la
+asignación base del nivel. Estas validaciones se aplican al crear y editar
+asignaciones, dentro de una transacción que bloquea el curso para evitar
+sobreasignaciones concurrentes. Si `POST /asignaciones-cursos` recibe una
+combinación de curso, nivel, subnivel y dependencia que ya existe, actualiza
+únicamente el `cupo` de esa asignación en lugar de crear otra. Si la base ya
+contiene más de una coincidencia, devuelve un conflicto para evitar elegir una
+fila arbitrariamente.
 
 | Método   | Ruta                       | Protección                                 | Función                                                           |
 | -------- | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
@@ -297,7 +356,8 @@ Body de `POST /asignaciones-cursos`:
 ```
 
 `idCurso`, `idNivel` y `cupo` son obligatorios. `subnivel` y `dependencias` se
-pueden omitir o enviar como `null`. Body parcial de
+pueden omitir o enviar como `null`; el subnivel debe existir y corresponder al
+nivel indicado. Body parcial de
 `PATCH /asignaciones-cursos/:id`:
 
 ```json
@@ -312,9 +372,19 @@ pueden omitir o enviar como `null`. Body parcial de
 Las rutas de consulta, edición y eliminación indican JWT por cookie y
 `RolesGuard` con rol `0`; la creación es pública para permitir inscripciones
 sin una cuenta del módulo de usuarios. El `POST` recibe en un mismo body los
-datos de inscripción y los datos personales. Si la CURP no existe, crea el
-registro personal dentro de la misma transacción; si ya existe, lo reutiliza
-sin modificarlo. La inscripción y el alta personal se confirman juntas.
+datos de inscripción y los datos personales. Si no existe un registro personal
+con el correo enviado, lo crea dentro de la misma transacción; si ya existe,
+lo reutiliza sin modificarlo. La inscripción y el alta personal se confirman
+juntas. El correo es obligatorio para identificar a la persona y evitar
+inscripciones duplicadas al mismo curso.
+
+La columna `fecha_registro` es de tipo `DATE` y la base de datos la llena
+automáticamente con la fecha actual al crear cada inscripción. Como el
+proyecto no sincroniza automáticamente el esquema, ejecuta:
+
+La ruta `GET /inscripciones-cursos/vista` consulta esta vista de MySQL y
+devuelve las inscripciones con curso, nivel, datos personales y cargo. Crea la
+vista en la base antes de solicitar esa ruta.
 
 Antes de guardar, se verifica el cupo global del curso (`cursos.cupos_max`) y
 el cupo base del nivel, que requiere una asignación del curso/nivel sin
@@ -324,8 +394,8 @@ asignación específica, se aplica únicamente el cupo base del nivel. El
 formulario no puede enviar subnivel y dependencia a la vez. Los cupos y
 duplicados se validan dentro de una transacción que bloquea el curso, para
 evitar excederlos con solicitudes concurrentes. Para el mismo curso se
-rechaza otra inscripción con la misma CURP o con el mismo correo asociado;
-inscribir a la persona en cursos distintos está permitido.
+rechaza otra inscripción con el mismo correo; inscribir a la persona en cursos
+distintos está permitido.
 
 #### Reglas de inscripción
 
@@ -334,6 +404,12 @@ inscribir a la persona en cursos distintos está permitido.
 - **Cupo del nivel:** cada inscripción, incluidas las que eligen subnivel o
   dependencia, cuenta para el cupo base de ese nivel. Por lo tanto, las opciones
   específicas no pueden hacer que el total del nivel sobrepase su cupo.
+- **Cupos reservados:** las asignaciones específicas de subnivel o dependencia
+  reservan lugares dentro del cupo base. Las inscripciones sin subnivel ni
+  dependencia solo pueden usar el cupo base menos esos lugares reservados. Por
+  ejemplo, con 5 lugares para el nivel y 2 asignados a un subnivel, solo se
+  aceptan 3 inscripciones generales; los otros 2 quedan disponibles para ese
+  subnivel.
 - **Cupo de subnivel o dependencia:** la persona puede elegir como máximo una
   de estas opciones. Si existe una asignación específica para la opción
   seleccionada, también se verifica su cupo; si no existe, se aplica solamente
@@ -342,49 +418,93 @@ inscribir a la persona en cursos distintos está permitido.
   existir una asignación del curso y nivel con `subnivel` y `dependencias` en
   `NULL`.
 
-| Método   | Ruta                        | Protección                                 | Función                                         |
-| -------- | --------------------------- | ------------------------------------------ | ----------------------------------------------- |
-| `GET`    | `/inscripciones-cursos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones.                            |
-| `GET`    | `/inscripciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una inscripción.                        |
-| `POST`   | `/inscripciones-cursos`     | 🔓 Ninguna                                 | Inscribe los datos enviados a un curso y nivel. |
-| `PATCH`  | `/inscripciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente una inscripción.         |
-| `DELETE` | `/inscripciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina una inscripción.                        |
+| Método   | Ruta                          | Protección                                 | Función                                                         |
+| -------- | ----------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| `GET`    | `/inscripciones-cursos`       | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones.                                            |
+| `GET`    | `/inscripciones-cursos/vista` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones con curso, nivel, datos personales y cargo. |
+| `GET`    | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una inscripción.                                        |
+| `POST`   | `/inscripciones-cursos`       | 🔓 Ninguna                                 | Inscribe los datos enviados a un curso y nivel.                 |
+| `PATCH`  | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente una inscripción.                         |
+| `DELETE` | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina una inscripción.                                        |
 
 Body de `POST /inscripciones-cursos`:
 
 ```json
 {
   "idCurso": 1,
-  "curp": "PEGJ800101HDFRRN09",
   "cct": "09ABC0001A",
   "escuela": "Escuela de ejemplo",
   "nombre": "Juan",
   "apPaterno": "Pérez",
   "amMaterno": "García",
   "correo": "juan.perez@ejemplo.com",
+  "idCargo": 1,
   "nivel": 2,
   "subnivel": 3
 }
 ```
 
-`idCurso`, `curp` y `nivel` son obligatorios. La CURP debe tener 18 caracteres.
-Los campos personales restantes y `subnivel`/`dependencia` son opcionales; solo
-se puede proporcionar uno de los dos últimos. Si la CURP ya existe, los datos
-personales enviados no sobrescriben el registro existente.
+`idCurso`, `correo` y `nivel` son obligatorios. Los demás campos personales y
+`subnivel`/`dependencia` son opcionales; solo se puede proporcionar una de las
+dos últimas opciones. Si se envía `subnivel`, debe existir en `cat_subniveles`
+y corresponder al `nivel` indicado. Si ya existe un registro personal con el correo enviado,
+se reutiliza y no se sobrescriben los datos personales existentes.
+
+`GET /inscripciones-cursos/vista` devuelve cada inscripción con su `fechaRegistro`,
+el nombre del curso y nivel, los datos personales y el cargo asociado (o `null`
+si no tiene cargo). `fecha_registro` se genera en la base y no se envía en el
+body.
+
 Body parcial de `PATCH /inscripciones-cursos/:id`:
 
 ```json
 {
   "nivel": 3,
-  "curp": "PEGJ800101HDFRRN09",
   "subnivel": null
 }
 ```
 
 ### Subniveles
 
-No existe una ruta local `/subniveles`: el módulo de subniveles fue retirado y
-esa información se obtendrá de una API externa.
+El módulo administra `cat_subniveles`. Cada subnivel tiene un ID asignado por
+el cliente, pertenece a un nivel y recibe `fecha_registro` automáticamente.
+Los subniveles se validan al asignar cupos y al inscribir: el subnivel enviado
+debe existir y pertenecer al mismo nivel de la asignación o inscripción. No se
+puede cambiar de nivel ni eliminar un subnivel usado por asignaciones o
+inscripciones.
+
+
+| Método   | Ruta                         | Protección                                 | Función                                                               |
+| -------- | ---------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| `GET`    | `/subniveles`                | 🔓 Ninguna                                 | Lista subniveles.                                                     |
+| `GET`    | `/subniveles/nivel/:idNivel` | 🔓 Ninguna                                 | Consulta en `v_niveles_subniveles` los subniveles del nivel indicado. |
+| `GET`    | `/subniveles/:id`            | 🔓 Ninguna                                 | Obtiene un subnivel por ID.                                           |
+| `POST`   | `/subniveles`                | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Crea un subnivel asociado a un nivel.                                 |
+| `PATCH`  | `/subniveles/:id`            | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza nivel o descripción del subnivel.                           |
+| `DELETE` | `/subniveles/:id`            | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina un subnivel que no esté en uso.                               |
+
+La ruta de consulta usa la vista `v_niveles_subniveles`, que debe existir en
+MySQL. Por ejemplo, `GET /subniveles/nivel/1` devuelve los subniveles del nivel
+con ID `1`; devuelve `404` si el nivel no existe.
+
+Body de `POST /subniveles`:
+
+```json
+{
+  "idSubnivel": 1,
+  "idNivel": 1,
+  "subnivel": "Primaria"
+}
+```
+
+`idSubnivel` e `idNivel` son obligatorios; `subnivel` puede ser `null` y
+acepta hasta 50 caracteres. Body parcial de `PATCH /subniveles/:id`:
+
+```json
+{
+  "subnivel": "Primaria alta"
+}
+```
 
 ## Pruebas
 

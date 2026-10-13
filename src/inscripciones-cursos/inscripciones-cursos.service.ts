@@ -7,12 +7,56 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { AsignacionCurso } from '../asignaciones-cursos/entities/asignacion-curso.entity';
+import { Cargo } from '../cargos/entities/cargo.entity';
+import { Subnivel } from '../subniveles/entities/subnivel.entity';
 import { Curso } from '../cursos/entities/curso.entity';
 import { DatoPersonal } from './datos-personales/entities/dato-personal.entity';
 import { Nivel } from '../niveles/entities/nivel.entity';
 import { CreateInscripcionCursoDto } from './dto/create-inscripcion-curso.dto';
 import { UpdateInscripcionCursoDto } from './dto/update-inscripcion-curso.dto';
 import { InscripcionCurso } from './entities/inscripcion-curso.entity';
+
+interface InscripcionCursoVistaRow {
+  idInscripcion: number;
+  idCurso: number;
+  idDatosPersonales: number;
+  idNivel: number;
+  subnivel: number | null;
+  dependencia: number | null;
+  fechaRegistro: string;
+  nombreCurso: string;
+  nombreNivel: string;
+  cargoId: number | null;
+  cargoNombre: string | null;
+  cct: string | null;
+  escuela: string | null;
+  nombre: string | null;
+  apPaterno: string | null;
+  amMaterno: string | null;
+  correo: string | null;
+}
+
+export interface InscripcionCursoVista {
+  idInscripcion: number;
+  idCurso: number;
+  idDatosPersonales: number;
+  nivel: number;
+  subnivel: number | null;
+  dependencia: number | null;
+  fechaRegistro: string;
+  curso: { idCurso: number; nombre: string };
+  nivelInfo: { idNivel: number; nombre: string };
+  datosPersonales: {
+    idDatosPersonales: number;
+    cct: string | null;
+    escuela: string | null;
+    nombre: string | null;
+    apPaterno: string | null;
+    amMaterno: string | null;
+    correo: string | null;
+    cargo: { idCargo: number; nombre: string | null } | null;
+  };
+}
 
 @Injectable()
 export class InscripcionesCursosService {
@@ -23,12 +67,61 @@ export class InscripcionesCursosService {
     private readonly cursoRepository: Repository<Curso>,
     @InjectRepository(Nivel)
     private readonly nivelRepository: Repository<Nivel>,
-    @InjectRepository(DatoPersonal)
-    private readonly datoPersonalRepository: Repository<DatoPersonal>,
   ) {}
 
   findAll(): Promise<InscripcionCurso[]> {
     return this.inscripcionRepository.find();
+  }
+
+  async findAllVista(): Promise<InscripcionCursoVista[]> {
+    const rows = await this.inscripcionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_inscripcion', 'idInscripcion')
+      .addSelect('vista.id_curso', 'idCurso')
+      .addSelect('vista.id_datos_personales', 'idDatosPersonales')
+      .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.subnivel', 'subnivel')
+      .addSelect('vista.dependencia', 'dependencia')
+      .addSelect('vista.fecha_registro', 'fechaRegistro')
+      .addSelect('vista.nombre_curso', 'nombreCurso')
+      .addSelect('vista.nombre_nivel', 'nombreNivel')
+      .addSelect('vista.id_cargo', 'cargoId')
+      .addSelect('vista.nombre_cargo', 'cargoNombre')
+      .addSelect('vista.cct', 'cct')
+      .addSelect('vista.escuela', 'escuela')
+      .addSelect('vista.nombre_persona', 'nombre')
+      .addSelect('vista.ap_paterno', 'apPaterno')
+      .addSelect('vista.am_materno', 'amMaterno')
+      .addSelect('vista.correo', 'correo')
+      .from('vista_inscripciones_cursos', 'vista')
+      .orderBy('vista.fecha_registro', 'DESC')
+      .addOrderBy('vista.id_inscripcion', 'DESC')
+      .getRawMany<InscripcionCursoVistaRow>();
+
+    return rows.map((row) => ({
+      idInscripcion: row.idInscripcion,
+      idCurso: row.idCurso,
+      idDatosPersonales: row.idDatosPersonales,
+      nivel: row.idNivel,
+      subnivel: row.subnivel,
+      dependencia: row.dependencia,
+      fechaRegistro: row.fechaRegistro,
+      curso: { idCurso: row.idCurso, nombre: row.nombreCurso },
+      nivelInfo: { idNivel: row.idNivel, nombre: row.nombreNivel },
+      datosPersonales: {
+        idDatosPersonales: row.idDatosPersonales,
+        cct: row.cct,
+        escuela: row.escuela,
+        nombre: row.nombre,
+        apPaterno: row.apPaterno,
+        amMaterno: row.amMaterno,
+        correo: row.correo,
+        cargo:
+          row.cargoId === null
+            ? null
+            : { idCargo: row.cargoId, nombre: row.cargoNombre },
+      },
+    }));
   }
 
   async findOne(id: number): Promise<InscripcionCurso> {
@@ -36,13 +129,15 @@ export class InscripcionesCursosService {
   }
 
   async create(data: CreateInscripcionCursoDto): Promise<InscripcionCurso> {
-    const curp = this.normalizarCurp(data.curp);
+    const correo = data.correo.trim().toLowerCase();
     return this.inscripcionRepository.manager.transaction(async (manager) => {
       const inscripcionRepository = manager.getRepository(InscripcionCurso);
       const cursoRepository = manager.getRepository(Curso);
       const nivelRepository = manager.getRepository(Nivel);
       const datoPersonalRepository = manager.getRepository(DatoPersonal);
       const asignacionRepository = manager.getRepository(AsignacionCurso);
+      const cargoRepository = manager.getRepository(Cargo);
+      const subnivelRepository = manager.getRepository(Subnivel);
 
       const curso = await this.findCursoOrFail(
         data.idCurso,
@@ -51,18 +146,27 @@ export class InscripcionesCursosService {
       );
       await this.findNivelOrFail(data.nivel, nivelRepository);
       this.ensureSingleSelection(data.subnivel, data.dependencia);
+      await this.findCargoOrFail(data.idCargo, cargoRepository);
+      await this.findSubnivelOrFail(
+        data.subnivel ?? null,
+        data.nivel,
+        subnivelRepository,
+      );
 
-      const datoExistente = await datoPersonalRepository.findOneBy({ curp });
+      const datoExistente = await this.findDatoPersonalByCorreo(
+        correo,
+        datoPersonalRepository,
+      );
       const datoPersonal =
         datoExistente ??
         datoPersonalRepository.create({
-          curp,
           cct: data.cct ?? null,
           escuela: data.escuela ?? null,
           nombre: data.nombre ?? null,
           apPaterno: data.apPaterno ?? null,
           amMaterno: data.amMaterno ?? null,
-          correo: data.correo ?? null,
+          correo,
+          idCargo: data.idCargo ?? null,
         });
 
       await this.ensureCapacity(
@@ -75,8 +179,7 @@ export class InscripcionesCursosService {
       );
       await this.ensureNoDuplicateInscription(
         data.idCurso,
-        curp,
-        datoPersonal.correo,
+        correo,
         undefined,
         inscripcionRepository,
       );
@@ -88,7 +191,7 @@ export class InscripcionesCursosService {
       const inscripcion = inscripcionRepository.create({
         idCurso: data.idCurso,
         nivel: data.nivel,
-        curp,
+        idDatosPersonales: datoPersonal.idDatosPersonales,
         subnivel: data.subnivel ?? null,
         dependencia: data.dependencia ?? null,
       });
@@ -106,6 +209,7 @@ export class InscripcionesCursosService {
       const nivelRepository = manager.getRepository(Nivel);
       const datoPersonalRepository = manager.getRepository(DatoPersonal);
       const asignacionRepository = manager.getRepository(AsignacionCurso);
+      const subnivelRepository = manager.getRepository(Subnivel);
       const inscripcion = await inscripcionRepository.findOne({
         where: { idInscripcion: id },
         lock: { mode: 'pessimistic_write' },
@@ -118,7 +222,6 @@ export class InscripcionesCursosService {
 
       const idCurso = data.idCurso ?? inscripcion.idCurso;
       const nivel = data.nivel ?? inscripcion.nivel;
-      const curp = this.normalizarCurp(data.curp ?? inscripcion.curp);
       const subnivel =
         data.subnivel !== undefined ? data.subnivel : inscripcion.subnivel;
       const dependencia =
@@ -131,13 +234,17 @@ export class InscripcionesCursosService {
         await this.findNivelOrFail(nivel, nivelRepository);
       }
       this.ensureSingleSelection(subnivel, dependencia);
-      const datoPersonal = await this.findDatoPersonalOrFail(
-        curp,
-        datoPersonalRepository,
-      );
+      await this.findSubnivelOrFail(subnivel, nivel, subnivelRepository);
+      const datoPersonal = await datoPersonalRepository.findOneBy({
+        idDatosPersonales: inscripcion.idDatosPersonales,
+      });
+      if (!datoPersonal) {
+        throw new NotFoundException(
+          `No se encontraron datos personales con ID ${inscripcion.idDatosPersonales}`,
+        );
+      }
       await this.ensureNoDuplicateInscription(
         idCurso,
-        curp,
         datoPersonal.correo,
         id,
         inscripcionRepository,
@@ -154,7 +261,6 @@ export class InscripcionesCursosService {
 
       inscripcion.idCurso = idCurso;
       inscripcion.nivel = nivel;
-      inscripcion.curp = curp;
       inscripcion.subnivel = subnivel;
       inscripcion.dependencia = dependencia;
 
@@ -205,34 +311,75 @@ export class InscripcionesCursosService {
     return nivel;
   }
 
-  private async findDatoPersonalOrFail(
-    curp: string,
-    repository: Repository<DatoPersonal> = this.datoPersonalRepository,
-  ): Promise<DatoPersonal> {
-    const datoPersonal = await repository.findOneBy({ curp });
-    if (!datoPersonal) {
-      throw new NotFoundException(
-        `No se encontraron datos personales para CURP ${curp}`,
+  private async findDatoPersonalByCorreo(
+    correo: string,
+    repository: Repository<DatoPersonal>,
+  ): Promise<DatoPersonal | null> {
+    const registros = await repository
+      .createQueryBuilder('persona')
+      .where('LOWER(persona.correo) = :correo', { correo })
+      .take(2)
+      .getMany();
+
+    if (registros.length > 1) {
+      throw new ConflictException(
+        'Hay varios registros personales con ese correo; debe corregirse la duplicidad antes de inscribir',
       );
     }
-    return datoPersonal;
+
+    return registros[0] ?? null;
+  }
+
+  private async findCargoOrFail(
+    id: number | null | undefined,
+    repository: Repository<Cargo>,
+  ): Promise<void> {
+    if (id == null) {
+      return;
+    }
+
+    const cargo = await repository.findOneBy({ idCargo: id });
+    if (!cargo) {
+      throw new NotFoundException(`No se encontro el cargo con ID ${id}`);
+    }
+  }
+
+  private async findSubnivelOrFail(
+    idSubnivel: number | null,
+    idNivel: number,
+    repository: Repository<Subnivel>,
+  ): Promise<void> {
+    if (idSubnivel === null) {
+      return;
+    }
+    const subnivel = await repository.findOneBy({ idSubnivel });
+    if (!subnivel) {
+      throw new NotFoundException(
+        `No se encontro el subnivel con ID ${idSubnivel}`,
+      );
+    }
+    if (subnivel.idNivel !== idNivel) {
+      throw new ConflictException(
+        `El subnivel ${idSubnivel} no pertenece al nivel ${idNivel}`,
+      );
+    }
   }
 
   private async ensureNoDuplicateInscription(
     idCurso: number,
-    curp: string,
     correo: string | null,
     excludeId?: number,
     repository: Repository<InscripcionCurso> = this.inscripcionRepository,
   ): Promise<void> {
     const query = repository
       .createQueryBuilder('inscripcion')
-      .leftJoin(DatoPersonal, 'persona', 'persona.curp = inscripcion.curp')
+      .leftJoin(
+        DatoPersonal,
+        'persona',
+        'persona.id_datos_personales = inscripcion.id_datos_personales',
+      )
       .where('inscripcion.idCurso = :idCurso', { idCurso })
-      .andWhere(
-        '(inscripcion.curp = :curp OR (:correo IS NOT NULL AND LOWER(persona.correo) = LOWER(:correo)))',
-        { curp, correo },
-      );
+      .andWhere('LOWER(persona.correo) = LOWER(:correo)', { correo });
 
     if (excludeId !== undefined) {
       query.andWhere('inscripcion.idInscripcion != :excludeId', { excludeId });
@@ -240,7 +387,7 @@ export class InscripcionesCursosService {
 
     if (await query.getOne()) {
       throw new ConflictException(
-        'La persona ya esta inscrita en este curso con la CURP o el correo proporcionado',
+        'La persona ya esta inscrita en este curso con el correo proporcionado',
       );
     }
   }
@@ -303,6 +450,25 @@ export class InscripcionesCursosService {
       throw new ConflictException('El nivel ya no tiene cupos disponibles');
     }
 
+    if (subnivel === null && dependencia === null) {
+      const cuposEspecificos = await this.sumSpecificAssignmentCapacity(
+        curso.idCurso,
+        nivel,
+        asignacionRepository,
+      );
+      const cuposGenerales = asignacionesNivel[0].cupo - cuposEspecificos;
+      const inscripcionesGenerales = await this.countInscripciones(
+        inscripcionRepository,
+        { idCurso: curso.idCurso, nivel, subnivel: null, dependencia: null },
+        excludeId,
+      );
+      if (inscripcionesGenerales >= cuposGenerales) {
+        throw new ConflictException(
+          `Los cupos generales del nivel estan agotados; hay ${cuposEspecificos} cupos reservados para subniveles o dependencias`,
+        );
+      }
+    }
+
     if (subnivel !== null) {
       await this.ensureSpecificCapacity(
         curso.idCurso,
@@ -324,6 +490,24 @@ export class InscripcionesCursosService {
         excludeId,
       );
     }
+  }
+
+  private async sumSpecificAssignmentCapacity(
+    idCurso: number,
+    nivel: number,
+    repository: Repository<AsignacionCurso>,
+  ): Promise<number> {
+    const result = await repository
+      .createQueryBuilder('asignacion')
+      .select('COALESCE(SUM(asignacion.cupo), 0)', 'totalCupo')
+      .where('asignacion.idCurso = :idCurso', { idCurso })
+      .andWhere('asignacion.idNivel = :nivel', { nivel })
+      .andWhere(
+        '(asignacion.subnivel IS NOT NULL OR asignacion.dependencias IS NOT NULL)',
+      )
+      .getRawOne<{ totalCupo: string | number }>();
+
+    return Number(result?.totalCupo ?? 0);
   }
 
   private async ensureSpecificCapacity(
@@ -428,14 +612,5 @@ export class InscripcionesCursosService {
     }
 
     return query.getCount();
-  }
-
-  private normalizarCurp(curp: string | null): string {
-    if (!curp?.trim()) {
-      throw new BadRequestException(
-        'La CURP es obligatoria para registrar una inscripcion',
-      );
-    }
-    return curp.trim().toUpperCase();
   }
 }

@@ -8,10 +8,6 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { UseGuards } from '@nestjs/common';
-import { JwtCookieGuard } from '../auth/jwt-cookie.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
 import { CreateInscripcionCursoDto } from './dto/create-inscripcion-curso.dto';
 import { UpdateInscripcionCursoDto } from './dto/update-inscripcion-curso.dto';
 import { InscripcionesCursosService } from './inscripciones-cursos.service';
@@ -27,6 +23,13 @@ export class InscripcionesCursosController {
   @Get()
   findAll() {
     return this.inscripcionesCursosService.findAll();
+  }
+
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
+  @Get('vista')
+  findAllVista() {
+    return this.inscripcionesCursosService.findAllVista();
   }
 
   // @UseGuards( JwtCookieGuard, RolesGuard)

@@ -4,13 +4,10 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
-import { UseGuards } from '@nestjs/common';
-import { JwtCookieGuard } from '../../auth/jwt-cookie.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
 import { CreateDatoPersonalDto } from './dto/create-dato-personal.dto';
 import { UpdateDatoPersonalDto } from './dto/update-dato-personal.dto';
 import { DatosPersonalesService } from './datos-personales.service';
@@ -26,9 +23,9 @@ export class DatosPersonalesController {
     return this.datosPersonalesService.findAll();
   }
 
-  @Get(':curp')
-  findOne(@Param('curp') curp: string) {
-    return this.datosPersonalesService.findOne(curp);
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.datosPersonalesService.findOne(id);
   }
 
   @Post()
@@ -38,15 +35,18 @@ export class DatosPersonalesController {
 
   // @UseGuards( JwtCookieGuard, RolesGuard)
   // @Roles(0)
-  @Patch(':curp')
-  update(@Param('curp') curp: string, @Body() data: UpdateDatoPersonalDto) {
-    return this.datosPersonalesService.update(curp, data);
+  @Patch(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateDatoPersonalDto,
+  ) {
+    return this.datosPersonalesService.update(id, data);
   }
 
   // @UseGuards( JwtCookieGuard, RolesGuard)
   // @Roles(0)
-  @Delete(':curp')
-  remove(@Param('curp') curp: string) {
-    return this.datosPersonalesService.remove(curp);
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.datosPersonalesService.remove(id);
   }
 }

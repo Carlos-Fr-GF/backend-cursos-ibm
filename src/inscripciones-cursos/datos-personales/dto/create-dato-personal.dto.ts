@@ -1,19 +1,15 @@
+import { Type } from 'class-transformer';
 import {
   IsEmail,
-  IsNotEmpty,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
-  MinLength,
+  Min,
 } from 'class-validator';
 
 export class CreateDatoPersonalDto {
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(18)
-  @MaxLength(18)
-  curp!: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(10)
@@ -43,4 +39,11 @@ export class CreateDatoPersonalDto {
   @IsEmail()
   @MaxLength(50)
   correo?: string | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(2147483647)
+  idCargo?: number | null;
 }

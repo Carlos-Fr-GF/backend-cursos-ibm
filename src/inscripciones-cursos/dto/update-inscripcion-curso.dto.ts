@@ -1,13 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  Length,
-  Max,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export class UpdateInscripcionCursoDto {
   @IsOptional()
@@ -15,11 +7,6 @@ export class UpdateInscripcionCursoDto {
   @IsInt()
   @Min(1)
   idCurso?: number;
-
-  @ValidateIf((_object, value) => value !== undefined)
-  @IsString()
-  @Length(18, 18)
-  curp?: string;
 
   @IsOptional()
   @Type(() => Number)
