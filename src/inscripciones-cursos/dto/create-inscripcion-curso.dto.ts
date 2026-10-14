@@ -59,11 +59,10 @@ export class CreateInscripcionCursoDto {
   nivel!: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(2147483647)
-  subnivel?: number | null;
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  subnivel?: string | null;
 
   @IsOptional()
   @Type(() => Number)

@@ -145,13 +145,14 @@ export class InscripcionesCursosService {
         true,
       );
       await this.findNivelOrFail(data.nivel, nivelRepository);
-      this.ensureSingleSelection(data.subnivel, data.dependencia);
-      await this.findCargoOrFail(data.idCargo, cargoRepository);
-      await this.findSubnivelOrFail(
+      const subnivel = await this.findSubnivelByNameOrFail(
         data.subnivel ?? null,
         data.nivel,
         subnivelRepository,
       );
+      const idSubnivel = subnivel?.idSubnivel ?? null;
+      this.ensureSingleSelection(idSubnivel, data.dependencia);
+      await this.findCargoOrFail(data.idCargo, cargoRepository);
 
       const datoExistente = await this.findDatoPersonalByCorreo(
         correo,
@@ -172,7 +173,7 @@ export class InscripcionesCursosService {
       await this.ensureCapacity(
         curso,
         data.nivel,
-        data.subnivel ?? null,
+        idSubnivel,
         data.dependencia ?? null,
         inscripcionRepository,
         asignacionRepository,
@@ -192,7 +193,7 @@ export class InscripcionesCursosService {
         idCurso: data.idCurso,
         nivel: data.nivel,
         idDatosPersonales: datoPersonal.idDatosPersonales,
-        subnivel: data.subnivel ?? null,
+        subnivel: idSubnivel,
         dependencia: data.dependencia ?? null,
       });
       return inscripcionRepository.save(inscripcion);
@@ -221,20 +222,46 @@ export class InscripcionesCursosService {
       }
 
       const idCurso = data.idCurso ?? inscripcion.idCurso;
+      if (data.subnivel !== undefined && data.nivel === undefined) {
+        throw new BadRequestException(
+          'Debe enviar nivel cuando actualiza el subnivel',
+        );
+      }
       const nivel = data.nivel ?? inscripcion.nivel;
+      const subnivelCatalogo =
+        data.subnivel === undefined
+          ? null
+          : await this.findSubnivelByNameOrFail(
+              data.subnivel,
+              nivel,
+              subnivelRepository,
+            );
       const subnivel =
-        data.subnivel !== undefined ? data.subnivel : inscripcion.subnivel;
+        data.subnivel === undefined
+          ? inscripcion.subnivel
+          : (subnivelCatalogo?.idSubnivel ?? null);
       const dependencia =
         data.dependencia !== undefined
           ? data.dependencia
           : inscripcion.dependencia;
 
       const curso = await this.findCursoOrFail(idCurso, cursoRepository, true);
-      if (nivel !== inscripcion.nivel) {
-        await this.findNivelOrFail(nivel, nivelRepository);
-      }
+      await this.findNivelOrFail(nivel, nivelRepository);
       this.ensureSingleSelection(subnivel, dependencia);
-      await this.findSubnivelOrFail(subnivel, nivel, subnivelRepository);
+      if (
+        data.subnivel === undefined &&
+        subnivel !== null &&
+        nivel !== inscripcion.nivel
+      ) {
+        const subnivelExistente = await subnivelRepository.findOneBy({
+          idSubnivel: subnivel,
+        });
+        if (!subnivelExistente || subnivelExistente.idNivel !== nivel) {
+          throw new ConflictException(
+            `El subnivel ${subnivel} no pertenece al nivel ${nivel}`,
+          );
+        }
+      }
       const datoPersonal = await datoPersonalRepository.findOneBy({
         idDatosPersonales: inscripcion.idDatosPersonales,
       });
@@ -344,25 +371,44 @@ export class InscripcionesCursosService {
     }
   }
 
-  private async findSubnivelOrFail(
-    idSubnivel: number | null,
+  private async findSubnivelByNameOrFail(
+    nombreSubnivel: string | null,
     idNivel: number,
     repository: Repository<Subnivel>,
-  ): Promise<void> {
-    if (idSubnivel === null) {
-      return;
+  ): Promise<Subnivel | null> {
+    if (nombreSubnivel === null) {
+      return null;
     }
-    const subnivel = await repository.findOneBy({ idSubnivel });
-    if (!subnivel) {
+
+    const nombreNormalizado = nombreSubnivel.trim();
+    if (nombreNormalizado.length === 0) {
+      throw new BadRequestException(
+        'El nombre del subnivel no puede estar vacio',
+      );
+    }
+
+    const coincidencias = await repository
+      .createQueryBuilder('subnivel')
+      .where('LOWER(TRIM(subnivel.subnivel)) = LOWER(:nombre)', {
+        nombre: nombreNormalizado,
+      })
+      .andWhere('subnivel.idNivel = :idNivel', { idNivel })
+      .take(2)
+      .getMany();
+
+    if (coincidencias.length === 0) {
       throw new NotFoundException(
-        `No se encontro el subnivel con ID ${idSubnivel}`,
+        `No se encontro el subnivel "${nombreNormalizado}" para el nivel ${idNivel}`,
       );
     }
-    if (subnivel.idNivel !== idNivel) {
+
+    if (coincidencias.length > 1) {
       throw new ConflictException(
-        `El subnivel ${idSubnivel} no pertenece al nivel ${idNivel}`,
+        `Hay varios subniveles llamados "${nombreNormalizado}" para el nivel ${idNivel}; el nombre debe ser unico dentro del nivel`,
       );
     }
+
+    return coincidencias[0];
   }
 
   private async ensureNoDuplicateInscription(

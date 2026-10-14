@@ -64,6 +64,11 @@ export class AsignacionesCursosService {
         );
       }
       const asignacionExistente = asignacionesExistentes[0];
+      if (asignacionExistente) {
+        throw new ConflictException(
+          'Ya existe una asignacion con ese curso, nivel y opcion; no se modifico el cupo',
+        );
+      }
       await this.ensureAsignacionesWithinCourseLimit(
         data.idCurso,
         data.cupo,
@@ -72,7 +77,6 @@ export class AsignacionesCursosService {
         data.idNivel,
         subnivel,
         dependencias,
-        asignacionExistente?.idAsignacion,
       );
       await this.ensureSubnivelWithinLevelLimit(
         data.idCurso,
@@ -81,13 +85,7 @@ export class AsignacionesCursosService {
         dependencias,
         data.cupo,
         asignacionRepository,
-        asignacionExistente?.idAsignacion,
       );
-
-      if (asignacionExistente) {
-        asignacionExistente.cupo = data.cupo;
-        return asignacionRepository.save(asignacionExistente);
-      }
 
       const asignacion = asignacionRepository.create({
         idCurso: data.idCurso,

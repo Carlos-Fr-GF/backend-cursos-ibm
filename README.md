@@ -19,6 +19,40 @@ npm run build
 npm run start:prod
 ```
 
+## Ejecución con Docker
+
+La imagen ejecuta la API en modo producción. El contenedor se conecta a una
+instancia MySQL existente; no crea la base ni sincroniza tablas, porque
+TypeORM tiene `synchronize: false`.
+
+1. Copia `.env.example` a `.env` y configura las credenciales MySQL y un valor
+   privado para `JWT_SECRET`. Si MySQL está en otra máquina, cambia `DB_HOST`
+   por su hostname o IP accesible desde Docker. Para MySQL instalado en la
+   máquina host, `host.docker.internal` es el valor inicial.
+2. Construye y levanta la API:
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. Comprueba el estado y los logs:
+
+   ```bash
+   docker compose ps
+   docker compose logs -f api
+   ```
+
+La API queda disponible en `http://localhost:3000` por defecto. El puerto de
+la máquina host se puede cambiar con `HOST_PORT` en `.env`. Para detenerla:
+
+```bash
+docker compose down
+```
+
+Antes de iniciar, asegúrate de que MySQL esté accesible desde el contenedor y
+que contenga las tablas y vistas requeridas por la aplicación. No agregues ni
+subas `.env` al repositorio; contiene secretos y está excluido de la imagen.
+
 La aplicación escucha en el puerto `3000` por defecto. Se puede configurar con
 `PORT`. La conexión requiere `DB_HOST`, `DB_PORT`, `DB_USERNAME`,
 `DB_PASSWORD` y `DB_DATABASE`. La firma JWT requiere `JWT_SECRET`.
@@ -330,10 +364,11 @@ debajo de los cupos ya asignados a sus subniveles; primero debe existir la
 asignación base del nivel. Estas validaciones se aplican al crear y editar
 asignaciones, dentro de una transacción que bloquea el curso para evitar
 sobreasignaciones concurrentes. Si `POST /asignaciones-cursos` recibe una
-combinación de curso, nivel, subnivel y dependencia que ya existe, actualiza
-únicamente el `cupo` de esa asignación en lugar de crear otra. Si la base ya
-contiene más de una coincidencia, devuelve un conflicto para evitar elegir una
-fila arbitrariamente.
+combinación de curso, nivel, subnivel y dependencia que ya existe, devuelve un
+conflicto y no modifica el cupo existente. Si la base ya contiene más de una
+coincidencia, también devuelve un conflicto para evitar elegir una fila
+arbitrariamente. Para modificar una asignación existente, usa
+`PATCH /asignaciones-cursos/:id`.
 
 | Método   | Ruta                       | Protección                                 | Función                                                           |
 | -------- | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
@@ -439,16 +474,24 @@ Body de `POST /inscripciones-cursos`:
   "amMaterno": "García",
   "correo": "juan.perez@ejemplo.com",
   "idCargo": 1,
-  "nivel": 2,
-  "subnivel": 3
+  "nivel": 1,
+  "subnivel": "PRIMARIA GENERAL"
 }
 ```
 
-`idCurso`, `correo` y `nivel` son obligatorios. Los demás campos personales y
-`subnivel`/`dependencia` son opcionales; solo se puede proporcionar una de las
-dos últimas opciones. Si se envía `subnivel`, debe existir en `cat_subniveles`
-y corresponder al `nivel` indicado. Si ya existe un registro personal con el correo enviado,
-se reutiliza y no se sobrescriben los datos personales existentes.
+`idCurso`, `correo` y `nivel` son obligatorios. `nivel` debe ser el ID del nivel
+del catálogo local. `subnivel`, cuando se envía, recibe el nombre concatenado
+que entrega el frontend (por ejemplo, `n_nivel + " " + n_subnivel`); el backend
+lo busca en `cat_subniveles.subnivel` dentro del nivel indicado y obtiene de ese
+registro `id_subnivel`. La búsqueda ignora mayúsculas/minúsculas y espacios al
+inicio o al final. Si no encuentra el nombre para ese nivel, responde `404`; si
+hay varios subniveles con ese nombre dentro del nivel, responde `409`.
+
+`dependencia` también es opcional; solo se puede proporcionar una de las dos
+opciones (`subnivel` o `dependencia`). Al enviar un subnivel, `nivel` no es
+opcional y debe coincidir con el nivel del catálogo. Los demás campos
+personales son opcionales. Si ya existe un registro personal con el correo
+enviado, se reutiliza y no se sobrescriben los datos personales existentes.
 
 `GET /inscripciones-cursos/vista` devuelve cada inscripción con su `fechaRegistro`,
 el nombre del curso y nivel, los datos personales y el cargo asociado (o `null`
@@ -459,10 +502,15 @@ Body parcial de `PATCH /inscripciones-cursos/:id`:
 
 ```json
 {
-  "nivel": 3,
-  "subnivel": null
+  "nivel": 1,
+  "subnivel": "PRIMARIA GENERAL"
 }
 ```
+
+Al enviar `subnivel` en una actualización, también se debe enviar `nivel` con
+el ID local del nivel. El backend resuelve el nombre dentro de ese nivel. Para
+quitar el subnivel y dejar la inscripción general, envía `"subnivel": null`
+junto con `nivel`.
 
 ### Subniveles
 
@@ -472,7 +520,6 @@ Los subniveles se validan al asignar cupos y al inscribir: el subnivel enviado
 debe existir y pertenecer al mismo nivel de la asignación o inscripción. No se
 puede cambiar de nivel ni eliminar un subnivel usado por asignaciones o
 inscripciones.
-
 
 | Método   | Ruta                         | Protección                                 | Función                                                               |
 | -------- | ---------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
@@ -491,7 +538,6 @@ Body de `POST /subniveles`:
 
 ```json
 {
-  "idSubnivel": 1,
   "idNivel": 1,
   "subnivel": "Primaria"
 }
