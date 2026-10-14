@@ -487,11 +487,25 @@ registro `id_subnivel`. La búsqueda ignora mayúsculas/minúsculas y espacios a
 inicio o al final. Si no encuentra el nombre para ese nivel, responde `404`; si
 hay varios subniveles con ese nombre dentro del nivel, responde `409`.
 
-`dependencia` también es opcional; solo se puede proporcionar una de las dos
-opciones (`subnivel` o `dependencia`). Al enviar un subnivel, `nivel` no es
-opcional y debe coincidir con el nivel del catálogo. Los demás campos
-personales son opcionales. Si ya existe un registro personal con el correo
-enviado, se reutiliza y no se sobrescriben los datos personales existentes.
+`dependencia` también es opcional. Se puede enviar solo `subnivel`, solo
+`dependencia`, o dejar ambos sin seleccionar (omitidos o con valor `null`) para
+una inscripción general. No se permite enviar ambos con valor. Al enviar un
+subnivel, `nivel` es obligatorio y debe coincidir con el nivel del catálogo.
+Los demás campos personales son opcionales. Si ya existe un registro personal
+con el correo enviado, se reutiliza y no se sobrescriben los datos personales
+existentes.
+
+Ejemplo de inscripción general, sin subnivel ni dependencia:
+
+```json
+{
+  "idCurso": 1,
+  "nivel": 1,
+  "correo": "persona@ejemplo.com",
+  "subnivel": null,
+  "dependencia": null
+}
+```
 
 `GET /inscripciones-cursos/vista` devuelve cada inscripción con su `fechaRegistro`,
 el nombre del curso y nivel, los datos personales y el cargo asociado (o `null`
