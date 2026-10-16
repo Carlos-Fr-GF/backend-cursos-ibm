@@ -21,6 +21,11 @@ export class SubnivelesController {
     return this.subnivelesService.findAll();
   }
 
+  @Get('vista')
+  findAllVista() {
+    return this.subnivelesService.findAllVista();
+  }
+
   @Get('nivel/:idNivel')
   findByNivelVista(@Param('idNivel', ParseIntPipe) idNivel: number) {
     return this.subnivelesService.findByNivelVista(idNivel);

@@ -20,6 +20,14 @@ export interface SubnivelVista {
   fechaRegistro: Date;
 }
 
+interface SubnivelVistaRow {
+  idSubnivel: number | string;
+  idNivel: number | string;
+  nivel: string;
+  subnivel: string | null;
+  fechaRegistro: Date;
+}
+
 @Injectable()
 export class SubnivelesService {
   constructor(
@@ -37,19 +45,39 @@ export class SubnivelesService {
     return this.subnivelRepository.find({ order: { idSubnivel: 'ASC' } });
   }
 
+  findAllVista(): Promise<SubnivelVista[]> {
+    return this.queryVista();
+  }
+
   async findByNivelVista(idNivel: number): Promise<SubnivelVista[]> {
     await this.findNivelOrFail(idNivel);
-    return this.subnivelRepository.manager
+    return this.queryVista(idNivel);
+  }
+
+  private async queryVista(idNivel?: number): Promise<SubnivelVista[]> {
+    const query = this.subnivelRepository.manager
       .createQueryBuilder()
       .select('vista.id_subnivel', 'idSubnivel')
       .addSelect('vista.id_nivel', 'idNivel')
       .addSelect('vista.nivel', 'nivel')
       .addSelect('vista.subnivel', 'subnivel')
       .addSelect('vista.fecha_registro', 'fechaRegistro')
-      .from('v_niveles_subniveles', 'vista')
-      .where('vista.id_nivel = :idNivel', { idNivel })
-      .orderBy('vista.id_subnivel', 'ASC')
-      .getRawMany<SubnivelVista>();
+      .from('v_niveles_subniveles', 'vista');
+
+    if (idNivel !== undefined) {
+      query.where('vista.id_nivel = :idNivel', { idNivel });
+    }
+
+    const rows = await query
+      .orderBy('vista.id_nivel', 'ASC')
+      .addOrderBy('vista.id_subnivel', 'ASC')
+      .getRawMany<SubnivelVistaRow>();
+
+    return rows.map((row) => ({
+      ...row,
+      idSubnivel: Number(row.idSubnivel),
+      idNivel: Number(row.idNivel),
+    }));
   }
 
   async findOne(id: number): Promise<Subnivel> {

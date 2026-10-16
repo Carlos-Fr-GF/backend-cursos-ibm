@@ -59,9 +59,15 @@ La aplicación escucha en el puerto `3000` por defecto; configura `PORT` para
 cambiarlo. La conexión a MySQL requiere `DB_HOST`, `DB_PORT`, `DB_USERNAME`,
 `DB_PASSWORD` y `DB_DATABASE`. También es necesario definir `JWT_SECRET`.
 
-Todas las rutas llevan el prefijo global `/api-backend`. Por ejemplo, para
-consultar los niveles en local, usa
-`http://localhost:3000/api-backend/niveles`.
+NestJS no configura un prefijo global. Por eso, en local las rutas se llaman
+directamente, por ejemplo:
+`http://localhost:3000/niveles`.
+
+En producción, Nginx puede publicar la API bajo un prefijo como `/api-backend`
+y quitarlo al reenviar cada solicitud a NestJS. En ese caso, la URL pública
+sería, por ejemplo, `https://tu-dominio/api-backend/niveles`, mientras NestJS
+recibe internamente `/niveles`. La ubicación y la barra final de `proxy_pass`
+en Nginx deben configurarse para quitar ese prefijo.
 
 Las rutas reciben y devuelven JSON, excepto las que crean o eliminan cookies.
 La aplicación valida los cuerpos de las solicitudes mediante los DTOs y
@@ -95,9 +101,11 @@ aplica hasta que se habilite.
 
 ## Rutas
 
-Las rutas de las tablas se muestran sin el prefijo global. Para llamarlas,
-antepón `/api-backend`; por ejemplo, `GET /niveles` corresponde a
-`GET /api-backend/niveles`.
+Las rutas de las tablas se muestran tal como las atiende NestJS, sin un
+prefijo global. Por ejemplo, `GET /niveles` se llama en local como
+`http://localhost:3000/niveles`. Si Nginx publica la API con un prefijo,
+antepón ese prefijo a la URL pública; por ejemplo,
+`https://tu-dominio/api-backend/niveles`.
 
 ### Estado de la aplicación
 
@@ -578,15 +586,19 @@ inscripciones.
 | Método   | Ruta                         | Protección                                 | Función                                                               |
 | -------- | ---------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
 | `GET`    | `/subniveles`                | 🔓 Ninguna                                 | Lista subniveles.                                                     |
+| `GET`    | `/subniveles/vista`          | 🔓 Ninguna                                 | Lista niveles con sus subniveles usando `v_niveles_subniveles`.       |
 | `GET`    | `/subniveles/nivel/:idNivel` | 🔓 Ninguna                                 | Consulta en `v_niveles_subniveles` los subniveles del nivel indicado. |
 | `GET`    | `/subniveles/:id`            | 🔓 Ninguna                                 | Obtiene un subnivel por ID.                                           |
 | `POST`   | `/subniveles`                | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Crea un subnivel asociado a un nivel.                                 |
 | `PATCH`  | `/subniveles/:id`            | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza nivel o descripción del subnivel.                           |
 | `DELETE` | `/subniveles/:id`            | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina un subnivel que no esté en uso.                               |
 
-La ruta de consulta usa la vista `v_niveles_subniveles`, que debe existir en
-MySQL. Por ejemplo, `GET /subniveles/nivel/1` devuelve los subniveles del nivel
-con ID `1`; devuelve `404` si el nivel no existe.
+Las rutas `/subniveles/vista` y `/subniveles/nivel/:idNivel` consultan la vista
+`v_niveles_subniveles`, que debe existir en MySQL. `GET /subniveles/vista`
+devuelve todas las filas de la vista; cada fila contiene un nivel y uno de sus
+subniveles. `GET /subniveles/nivel/1` devuelve solo las filas del nivel con ID
+`1` y responde `404` si ese nivel no existe. La vista usa un `JOIN` interno,
+por lo que no incluye niveles que todavía no tengan subniveles.
 
 Body de `POST /subniveles`:
 
