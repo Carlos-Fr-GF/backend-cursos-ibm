@@ -1,18 +1,18 @@
 # API de cursos
 
-Backend REST desarrollado con NestJS, TypeORM y MySQL. La API administra
-usuarios, catálogos y cursos con sus asignaciones e inscripciones.
+API REST desarrollada con NestJS, TypeORM y MySQL. Permite administrar usuarios,
+catálogos, cursos, asignaciones e inscripciones.
 
 ## Requisitos y ejecución
 
-Instala dependencias y ejecuta en desarrollo:
+Instala las dependencias y levanta la API en modo desarrollo:
 
 ```bash
 npm install
 npm run start:dev
 ```
 
-Para compilar y ejecutar en producción:
+Para compilar y ejecutar la aplicación en modo producción:
 
 ```bash
 npm run build
@@ -21,14 +21,15 @@ npm run start:prod
 
 ## Ejecución con Docker
 
-La imagen ejecuta la API en modo producción. El contenedor se conecta a una
-instancia MySQL existente; no crea la base ni sincroniza tablas, porque
-TypeORM tiene `synchronize: false`.
+La imagen ejecuta la API en modo producción y se conecta a una instancia MySQL
+existente. No crea la base de datos ni sincroniza las tablas: TypeORM está
+configurado con `synchronize: false`.
 
-1. Copia `.env.example` a `.env` y configura las credenciales MySQL y un valor
-   privado para `JWT_SECRET`. Si MySQL está en otra máquina, cambia `DB_HOST`
-   por su hostname o IP accesible desde Docker. Para MySQL instalado en la
-   máquina host, `host.docker.internal` es el valor inicial.
+1. Copia `.env.example` a `.env` y configura las credenciales de MySQL y un
+   valor privado para `JWT_SECRET`. Si MySQL está en otra máquina, configura
+   `DB_HOST` con un nombre de host o una dirección IP accesible desde Docker.
+   Si MySQL está instalado en la máquina host, puedes usar
+   `host.docker.internal`.
 2. Construye y levanta la API:
 
    ```bash
@@ -42,43 +43,46 @@ TypeORM tiene `synchronize: false`.
    docker compose logs -f api
    ```
 
-La API queda disponible en `http://localhost:3000` por defecto. El puerto de
-la máquina host se puede cambiar con `HOST_PORT` en `.env`. Para detenerla:
+El contenedor publica la API en `http://localhost:3000` por defecto; puedes
+cambiar el puerto de la máquina host con `HOST_PORT` en `.env`. Para detenerla:
 
 ```bash
 docker compose down
 ```
 
-Antes de iniciar, asegúrate de que MySQL esté accesible desde el contenedor y
-que contenga las tablas y vistas requeridas por la aplicación. No agregues ni
-subas `.env` al repositorio; contiene secretos y está excluido de la imagen.
+Antes de iniciar, comprueba que el contenedor pueda conectarse a MySQL y que la
+base tenga todas las tablas y vistas que requiere la aplicación. No agregues
+`.env` al repositorio ni lo subas: contiene secretos y está excluido de la
+imagen.
 
-La aplicación escucha en el puerto `3000` por defecto. Se puede configurar con
-`PORT`. La conexión requiere `DB_HOST`, `DB_PORT`, `DB_USERNAME`,
-`DB_PASSWORD` y `DB_DATABASE`. La firma JWT requiere `JWT_SECRET`.
+La aplicación escucha en el puerto `3000` por defecto; configura `PORT` para
+cambiarlo. La conexión a MySQL requiere `DB_HOST`, `DB_PORT`, `DB_USERNAME`,
+`DB_PASSWORD` y `DB_DATABASE`. También es necesario definir `JWT_SECRET`.
 
-La base URL local por defecto es `http://localhost:3000`. No se configura un
-prefijo global de rutas.
+Todas las rutas llevan el prefijo global `/api-backend`. Por ejemplo, para
+consultar los niveles en local, usa
+`http://localhost:3000/api-backend/niveles`.
 
-Todas las rutas reciben y devuelven JSON, salvo las que crean o limpian cookies.
-La aplicación habilita `ValidationPipe` global con `whitelist` y `transform`:
-los bodies se validan según sus DTOs y se eliminan propiedades no declaradas.
-Para enviar un body, utiliza `Content-Type: application/json`.
+Las rutas reciben y devuelven JSON, excepto las que crean o eliminan cookies.
+La aplicación valida los cuerpos de las solicitudes mediante los DTOs y
+`ValidationPipe`. Las opciones `whitelist` y `transform` eliminan las
+propiedades no declaradas y convierten los valores a los tipos esperados. Envía
+los cuerpos JSON con `Content-Type: application/json`.
 
 ## Protección y autenticación
 
-- **JWT por cookie**: `JwtCookieGuard` valida la cookie `jwt`, carga el usuario
-  en la petición y renueva la cookie. El nombre por defecto se puede cambiar con
+- **JWT en cookie:** `JwtCookieGuard` valida la cookie `jwt`, agrega el usuario
+  a la solicitud y renueva la cookie. Puedes cambiar el nombre de la cookie con
   `JWT_COOKIE_NAME`.
-- **Roles**: `RolesGuard` permite que el rol `0` tenga acceso
-  administrativo y omite la comparación de roles; otros roles deben coincidir
-  con los declarados en la ruta.
-- La validación CSRF está desactivada en `main.ts`; `/csrf-token` emite el token,
-  pero el middleware que comprobaría la cabecera `X-CSRF-Token` está comentado.
+- **Roles:** `RolesGuard` concede acceso administrativo al rol `0`; para los
+  demás roles, compara el rol del usuario con los permitidos en la ruta.
+- **CSRF:** la validación está desactivada en `main.ts`. La ruta `/csrf-token`
+  genera un token, pero el middleware que validaría la cabecera
+  `X-CSRF-Token` está comentado.
 
-Las tablas muestran la protección prevista para cada ruta según las anotaciones
-del controlador, incluso cuando estas están comentadas en el código. Las
-anotaciones comentadas no se aplican hasta descomentarlas.
+Las tablas indican la protección prevista según las anotaciones de cada
+controlador. Si una anotación está comentada en el código, esa protección no se
+aplica hasta que se habilite.
 
 - 🔓 Ninguna (ruta pública).
 - 🍪 JWT por cookie (`JwtCookieGuard`).
@@ -86,10 +90,14 @@ anotaciones comentadas no se aplican hasta descomentarlas.
 - 🔐 JWT por cookie y roles.
 
 > **Atención:** `PATCH /usuarios/:id` y `PATCH /usuarios/:id/desactivar` usan
-> `req.user.sub`. Mientras las anotaciones de guard estén comentadas, sin otra
-> capa que asigne `req.user` estas rutas pueden fallar en tiempo de ejecución.
+> `req.user.sub`. Si los guards siguen comentados y ninguna otra capa asigna
+> `req.user`, estas rutas pueden fallar al ejecutarse.
 
 ## Rutas
+
+Las rutas de las tablas se muestran sin el prefijo global. Para llamarlas,
+antepón `/api-backend`; por ejemplo, `GET /niveles` corresponde a
+`GET /api-backend/niveles`.
 
 ### Estado de la aplicación
 
@@ -228,14 +236,14 @@ Body parcial de `PATCH /dependencias/:id`:
 
 ### Cargos
 
-El catálogo `cat_cargo` administra los cargos disponibles. La columna de texto
-se llama `cargo` en la base de datos. Cada registro de datos personales puede
-asociarse opcionalmente con un cargo mediante `datos_personales.id_cargo`; la
-FK apunta a `cat_cargo.id_cargo`. Al crear o actualizar datos personales, el
-backend comprueba que el cargo exista. Los endpoints de escritura indican JWT
-por cookie y `RolesGuard` con rol `0` (anotaciones comentadas en el controlador).
-Como TypeORM no sincroniza el esquema automáticamente, aplica una vez estos
-cambios en MySQL:
+El catálogo `cat_cargo` almacena los cargos disponibles. Su columna de texto
+se llama `cargo`. Cada registro de datos personales puede asociarse a un cargo
+mediante `datos_personales.id_cargo`, que referencia `cat_cargo.id_cargo`.
+Antes de crear o actualizar la asociación, el backend comprueba que el cargo
+exista. Las rutas de escritura tienen anotaciones para JWT por cookie y rol `0`,
+pero esas anotaciones están comentadas en el controlador. TypeORM no crea ni
+actualiza el esquema automáticamente; las tablas y sus claves foráneas deben
+existir previamente en MySQL.
 
 | Método   | Ruta          | Protección                                 | Función                        |
 | -------- | ------------- | ------------------------------------------ | ------------------------------ |
@@ -264,12 +272,12 @@ Body de `POST /cargos`:
 
 ### Inscripciones y datos personales
 
-Los datos personales y las inscripciones están organizados juntos bajo el
-módulo de inscripciones porque comparten el flujo de registro. Se mantienen
-como submódulos separados. `datos_personales` usa `id_datos_personales`
-autoincremental como clave primaria; conserva CCT, escuela, nombre, apellidos y
-correo. `inscripciones_cursos.id_datos_personales` debe ser entero y referenciar
-esa clave primaria mediante una FK.
+Los datos personales y las inscripciones forman parte del mismo módulo porque
+comparten el flujo de registro, aunque cada uno se implementa en un submódulo
+separado. La tabla `datos_personales` usa `id_datos_personales` como clave
+primaria autoincremental y almacena CCT, institución, nombre, apellidos y
+correo. La columna `inscripciones_cursos.id_datos_personales` debe tener el
+mismo tipo y referenciar esa clave mediante una clave foránea.
 
 Las rutas de lectura y creación no tienen guard indicado. Para edición y
 eliminación se indica JWT por cookie y `RolesGuard` con rol `0`.
@@ -287,7 +295,7 @@ Body de `POST /datos-personales`:
 ```json
 {
   "cct": "09ABC0001A",
-  "escuela": "Escuela de ejemplo",
+  "institucion": "Institución de ejemplo",
   "nombre": "Juan",
   "apPaterno": "Pérez",
   "amMaterno": "García",
@@ -304,7 +312,7 @@ asociado cuando existe. Body parcial de
 
 ```json
 {
-  "escuela": "Nueva escuela",
+  "institucion": "Nueva institución",
   "correo": "juan.nuevo@ejemplo.com",
   "idCargo": null
 }
@@ -404,22 +412,32 @@ nivel indicado. Body parcial de
 
 ### Inscripciones a cursos
 
-Las rutas de consulta, edición y eliminación indican JWT por cookie y
-`RolesGuard` con rol `0`; la creación es pública para permitir inscripciones
-sin una cuenta del módulo de usuarios. El `POST` recibe en un mismo body los
-datos de inscripción y los datos personales. Si no existe un registro personal
-con el correo enviado, lo crea dentro de la misma transacción; si ya existe,
-lo reutiliza sin modificarlo. La inscripción y el alta personal se confirman
-juntas. El correo es obligatorio para identificar a la persona y evitar
-inscripciones duplicadas al mismo curso.
+La creación de inscripciones es pública para permitir el registro de personas
+que no tienen una cuenta en el módulo de usuarios. Las rutas de consulta,
+edición y eliminación tienen anotaciones para JWT por cookie y rol `0`; consulta
+la sección de autenticación para conocer el estado de esas protecciones.
 
-La columna `fecha_registro` es de tipo `DATE` y la base de datos la llena
-automáticamente con la fecha actual al crear cada inscripción. Como el
-proyecto no sincroniza automáticamente el esquema, ejecuta:
+El `POST /inscripciones-cursos` recibe en un solo cuerpo los datos de la
+inscripción y los datos personales. El correo es obligatorio y se utiliza para
+identificar a la persona y evitar que se inscriba más de una vez al mismo curso.
+Si ya existe un registro personal con ese correo, se reutiliza sin modificarlo;
+si no existe, se crea. La inscripción y, cuando corresponda, el registro
+personal se guardan juntos en una transacción.
 
-La ruta `GET /inscripciones-cursos/vista` consulta esta vista de MySQL y
-devuelve las inscripciones con curso, nivel, datos personales y cargo. Crea la
-vista en la base antes de solicitar esa ruta.
+La columna `fecha_registro` es de tipo `DATE`. MySQL la establece
+automáticamente al crear la inscripción; no es necesario enviarla en el body.
+Como TypeORM no crea ni actualiza tablas o vistas, crea previamente en MySQL
+las vistas que se describen a continuación.
+
+#### Vista de inscripciones
+
+`GET /inscripciones-cursos/vista` consulta `v_inscripciones_cursos` y devuelve
+todas las inscripciones con los datos del curso, nivel, subnivel, dependencia,
+persona y cargo. Las rutas de consulta filtrada utilizan esta misma vista.
+
+
+
+#### Validación de cupos al inscribir
 
 Antes de guardar, se verifica el cupo global del curso (`cursos.cupos_max`) y
 el cupo base del nivel, que requiere una asignación del curso/nivel sin
@@ -432,7 +450,7 @@ evitar excederlos con solicitudes concurrentes. Para el mismo curso se
 rechaza otra inscripción con el mismo correo; inscribir a la persona en cursos
 distintos está permitido.
 
-#### Reglas de inscripción
+#### Resumen de las reglas de cupo
 
 - **Cupo del curso:** la cantidad total de inscripciones del curso no puede
   superar `cursos.cupos_max`, sin importar el nivel ni la opción seleccionada.
@@ -457,10 +475,31 @@ distintos está permitido.
 | -------- | ----------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
 | `GET`    | `/inscripciones-cursos`       | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones.                                            |
 | `GET`    | `/inscripciones-cursos/vista` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones con curso, nivel, datos personales y cargo. |
+| `GET`    | `/inscripciones-cursos/vista/curso/:idCurso` | 🔓 Ninguna | Lista las inscripciones de un curso, sin filtrar por nivel ni subnivel. |
+| `GET`    | `/inscripciones-cursos/vista/nivel/:nivel?idCurso=:idCurso` | 🔓 Ninguna | Filtra las inscripciones por curso y nivel. |
+| `GET`    | `/inscripciones-cursos/conteo?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Cuenta las inscripciones de un curso y nivel. |
+| `GET`    | `/inscripciones-cursos/cupos?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Devuelve el cupo del nivel, las plazas ocupadas y las disponibles. |
 | `GET`    | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una inscripción.                                        |
 | `POST`   | `/inscripciones-cursos`       | 🔓 Ninguna                                 | Inscribe los datos enviados a un curso y nivel.                 |
 | `PATCH`  | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente una inscripción.                         |
 | `DELETE` | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina una inscripción.                                        |
+
+El filtro por nivel y las rutas de conteo y cupos requieren tanto el ID del
+curso como el ID del nivel, ya que cada curso puede tener cupos distintos por
+nivel. El filtro por curso solo requiere el ID del curso. Ejemplos:
+
+```text
+GET /inscripciones-cursos/vista/nivel/2?idCurso=1
+GET /inscripciones-cursos/vista/curso/1
+GET /inscripciones-cursos/conteo?idCurso=1&nivel=2
+GET /inscripciones-cursos/cupos?idCurso=1&nivel=2
+```
+
+`GET /inscripciones-cursos/cupos` consulta la vista `vista_cupos_nivel`.
+La vista incluye solo las asignaciones base del nivel (sin subnivel ni
+dependencia). Si no existe una asignación base para el curso y nivel indicados,
+la ruta de cupos devuelve `404`. El endpoint de conteo devuelve `0` cuando no
+hay inscripciones.
 
 Body de `POST /inscripciones-cursos`:
 
@@ -468,7 +507,7 @@ Body de `POST /inscripciones-cursos`:
 {
   "idCurso": 1,
   "cct": "09ABC0001A",
-  "escuela": "Escuela de ejemplo",
+  "institucion": "Institución de ejemplo",
   "nombre": "Juan",
   "apPaterno": "Pérez",
   "amMaterno": "García",
@@ -479,21 +518,21 @@ Body de `POST /inscripciones-cursos`:
 }
 ```
 
-`idCurso`, `correo` y `nivel` son obligatorios. `nivel` debe ser el ID del nivel
-del catálogo local. `subnivel`, cuando se envía, recibe el nombre concatenado
-que entrega el frontend (por ejemplo, `n_nivel + " " + n_subnivel`); el backend
-lo busca en `cat_subniveles.subnivel` dentro del nivel indicado y obtiene de ese
-registro `id_subnivel`. La búsqueda ignora mayúsculas/minúsculas y espacios al
-inicio o al final. Si no encuentra el nombre para ese nivel, responde `404`; si
-hay varios subniveles con ese nombre dentro del nivel, responde `409`.
+Los campos `idCurso`, `correo` y `nivel` son obligatorios. `nivel` debe ser el
+ID del nivel en el catálogo local. Si se envía `subnivel`, debe ser el nombre
+concatenado que proporciona el frontend (por ejemplo,
+`n_nivel + " " + n_subnivel`). El backend busca ese nombre en
+`cat_subniveles.subnivel`, dentro del nivel indicado, y obtiene el
+`id_subnivel` correspondiente. La búsqueda ignora mayúsculas y minúsculas, así
+como espacios al inicio y al final. Si no encuentra el subnivel, responde
+`404`; si hay más de una coincidencia en el mismo nivel, responde `409`.
 
-`dependencia` también es opcional. Se puede enviar solo `subnivel`, solo
-`dependencia`, o dejar ambos sin seleccionar (omitidos o con valor `null`) para
-una inscripción general. No se permite enviar ambos con valor. Al enviar un
-subnivel, `nivel` es obligatorio y debe coincidir con el nivel del catálogo.
-Los demás campos personales son opcionales. Si ya existe un registro personal
-con el correo enviado, se reutiliza y no se sobrescriben los datos personales
-existentes.
+`dependencia` también es opcional. Se puede enviar un subnivel, una dependencia
+o ninguno de los dos (omitido o con valor `null`) para una inscripción general.
+No se permite enviar ambos con valor. Al enviar un subnivel, `nivel` debe
+identificar el nivel al que pertenece. Los demás datos personales son
+opcionales. Si ya existe un registro personal con el correo enviado, se
+reutiliza y sus datos no se sobrescriben.
 
 Ejemplo de inscripción general, sin subnivel ni dependencia:
 
@@ -507,9 +546,10 @@ Ejemplo de inscripción general, sin subnivel ni dependencia:
 }
 ```
 
-`GET /inscripciones-cursos/vista` devuelve cada inscripción con su `fechaRegistro`,
-el nombre del curso y nivel, los datos personales y el cargo asociado (o `null`
-si no tiene cargo). `fecha_registro` se genera en la base y no se envía en el
+`GET /inscripciones-cursos/vista` devuelve cada inscripción como un registro
+plano, con `idCurso`, nombre del curso, `idNivel`, nombre del nivel, subnivel,
+dependencia, cargo, datos personales y `fechaRegistro`. Si no hay cargo
+asociado, `cargo` será `null`. La fecha se genera en MySQL y no se envía en el
 body.
 
 Body parcial de `PATCH /inscripciones-cursos/:id`:

@@ -17,45 +17,47 @@ import { UpdateInscripcionCursoDto } from './dto/update-inscripcion-curso.dto';
 import { InscripcionCurso } from './entities/inscripcion-curso.entity';
 
 interface InscripcionCursoVistaRow {
-  idInscripcion: number;
-  idCurso: number;
-  idDatosPersonales: number;
-  idNivel: number;
-  subnivel: number | null;
-  dependencia: number | null;
-  fechaRegistro: string;
-  nombreCurso: string;
-  nombreNivel: string;
-  cargoId: number | null;
-  cargoNombre: string | null;
+  idInscripcion: number | string;
+  idCurso: number | string;
+  curso: string;
+  idNivel: number | string;
+  nivel: string;
+  subnivel: number | string | null;
+  dependencia: number | string | null;
+  cargo: string | null;
   cct: string | null;
-  escuela: string | null;
+  institucion: string | null;
   nombre: string | null;
-  apPaterno: string | null;
-  amMaterno: string | null;
+  apellidoPaterno: string | null;
+  apellidoMaterno: string | null;
   correo: string | null;
+  fechaRegistro: string;
+}
+
+interface CuposNivelRow {
+  idCurso: number | string;
+  nivel: number | string;
+  cupoNivel: number | string;
+  inscripcionesUsadas: number | string;
+  cuposDisponibles: number | string;
 }
 
 export interface InscripcionCursoVista {
   idInscripcion: number;
   idCurso: number;
-  idDatosPersonales: number;
-  nivel: number;
+  curso: string;
+  idNivel: number;
+  nivel: string;
   subnivel: number | null;
   dependencia: number | null;
+  cargo: string | null;
+  cct: string | null;
+  institucion: string | null;
+  nombre: string | null;
+  apellidoPaterno: string | null;
+  apellidoMaterno: string | null;
+  correo: string | null;
   fechaRegistro: string;
-  curso: { idCurso: number; nombre: string };
-  nivelInfo: { idNivel: number; nombre: string };
-  datosPersonales: {
-    idDatosPersonales: number;
-    cct: string | null;
-    escuela: string | null;
-    nombre: string | null;
-    apPaterno: string | null;
-    amMaterno: string | null;
-    correo: string | null;
-    cargo: { idCargo: number; nombre: string | null } | null;
-  };
 }
 
 @Injectable()
@@ -73,54 +75,120 @@ export class InscripcionesCursosService {
     return this.inscripcionRepository.find();
   }
 
-  async findAllVista(): Promise<InscripcionCursoVista[]> {
-    const rows = await this.inscripcionRepository.manager
+  findAllVista(): Promise<InscripcionCursoVista[]> {
+    return this.queryVista();
+  }
+
+  findVistaByCurso(idCurso: number): Promise<InscripcionCursoVista[]> {
+    return this.queryVista(idCurso);
+  }
+
+  findVistaByCursoAndNivel(
+    idCurso: number,
+    nivel: number,
+  ): Promise<InscripcionCursoVista[]> {
+    return this.queryVista(idCurso, nivel);
+  }
+
+  async countByCursoAndNivel(
+    idCurso: number,
+    nivel: number,
+  ): Promise<{ idCurso: number; nivel: number; totalInscripciones: number }> {
+    const totalInscripciones = await this.inscripcionRepository.count({
+      where: { idCurso, nivel },
+    });
+    return { idCurso, nivel, totalInscripciones };
+  }
+
+  async getCapacityByCursoAndNivel(
+    idCurso: number,
+    nivel: number,
+  ): Promise<{
+    idCurso: number;
+    nivel: number;
+    cupoNivel: number;
+    inscripcionesUsadas: number;
+    cuposDisponibles: number;
+  }> {
+    const row = await this.inscripcionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_curso', 'idCurso')
+      .addSelect('vista.id_nivel', 'nivel')
+      .addSelect('vista.cupo_nivel', 'cupoNivel')
+      .addSelect('vista.inscripciones_usadas', 'inscripcionesUsadas')
+      .addSelect('vista.cupos_disponibles', 'cuposDisponibles')
+      .from('vista_cupos_nivel', 'vista')
+      .where('vista.id_curso = :idCurso', { idCurso })
+      .andWhere('vista.id_nivel = :nivel', { nivel })
+      .getRawOne<CuposNivelRow>();
+
+    if (!row) {
+      throw new NotFoundException(
+        `No existe una asignacion base de cupo para el curso ${idCurso} y el nivel ${nivel}`,
+      );
+    }
+
+    return {
+      idCurso: Number(row.idCurso),
+      nivel: Number(row.nivel),
+      cupoNivel: Number(row.cupoNivel),
+      inscripcionesUsadas: Number(row.inscripcionesUsadas),
+      cuposDisponibles: Number(row.cuposDisponibles),
+    };
+  }
+
+  private async queryVista(
+    idCurso?: number,
+    nivel?: number,
+  ): Promise<InscripcionCursoVista[]> {
+    const query = this.inscripcionRepository.manager
       .createQueryBuilder()
       .select('vista.id_inscripcion', 'idInscripcion')
       .addSelect('vista.id_curso', 'idCurso')
-      .addSelect('vista.id_datos_personales', 'idDatosPersonales')
+      .addSelect('vista.curso', 'curso')
       .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.nivel', 'nivel')
       .addSelect('vista.subnivel', 'subnivel')
       .addSelect('vista.dependencia', 'dependencia')
       .addSelect('vista.fecha_registro', 'fechaRegistro')
-      .addSelect('vista.nombre_curso', 'nombreCurso')
-      .addSelect('vista.nombre_nivel', 'nombreNivel')
-      .addSelect('vista.id_cargo', 'cargoId')
-      .addSelect('vista.nombre_cargo', 'cargoNombre')
+      .addSelect('vista.cargo', 'cargo')
       .addSelect('vista.cct', 'cct')
-      .addSelect('vista.escuela', 'escuela')
-      .addSelect('vista.nombre_persona', 'nombre')
-      .addSelect('vista.ap_paterno', 'apPaterno')
-      .addSelect('vista.am_materno', 'amMaterno')
+      .addSelect('vista.institucion', 'institucion')
+      .addSelect('vista.nombre', 'nombre')
+      .addSelect('vista.apellido_paterno', 'apellidoPaterno')
+      .addSelect('vista.apellido_materno', 'apellidoMaterno')
       .addSelect('vista.correo', 'correo')
-      .from('vista_inscripciones_cursos', 'vista')
+      .from('v_inscripciones_cursos', 'vista');
+
+    if (idCurso !== undefined) {
+      query.andWhere('vista.id_curso = :idCurso', { idCurso });
+    }
+    if (nivel !== undefined) {
+      query.andWhere('vista.id_nivel = :nivel', { nivel });
+    }
+
+    const rows = await query
       .orderBy('vista.fecha_registro', 'DESC')
       .addOrderBy('vista.id_inscripcion', 'DESC')
       .getRawMany<InscripcionCursoVistaRow>();
 
     return rows.map((row) => ({
-      idInscripcion: row.idInscripcion,
-      idCurso: row.idCurso,
-      idDatosPersonales: row.idDatosPersonales,
-      nivel: row.idNivel,
-      subnivel: row.subnivel,
-      dependencia: row.dependencia,
+      idInscripcion: Number(row.idInscripcion),
+      idCurso: Number(row.idCurso),
+      curso: row.curso,
+      idNivel: Number(row.idNivel),
+      nivel: row.nivel,
+      subnivel: row.subnivel === null ? null : Number(row.subnivel),
+      dependencia:
+        row.dependencia === null ? null : Number(row.dependencia),
+      cargo: row.cargo,
+      cct: row.cct,
+      institucion: row.institucion,
+      nombre: row.nombre,
+      apellidoPaterno: row.apellidoPaterno,
+      apellidoMaterno: row.apellidoMaterno,
+      correo: row.correo,
       fechaRegistro: row.fechaRegistro,
-      curso: { idCurso: row.idCurso, nombre: row.nombreCurso },
-      nivelInfo: { idNivel: row.idNivel, nombre: row.nombreNivel },
-      datosPersonales: {
-        idDatosPersonales: row.idDatosPersonales,
-        cct: row.cct,
-        escuela: row.escuela,
-        nombre: row.nombre,
-        apPaterno: row.apPaterno,
-        amMaterno: row.amMaterno,
-        correo: row.correo,
-        cargo:
-          row.cargoId === null
-            ? null
-            : { idCargo: row.cargoId, nombre: row.cargoNombre },
-      },
     }));
   }
 
@@ -162,7 +230,7 @@ export class InscripcionesCursosService {
         datoExistente ??
         datoPersonalRepository.create({
           cct: data.cct ?? null,
-          escuela: data.escuela ?? null,
+          institucion: data.institucion ?? null,
           nombre: data.nombre ?? null,
           apPaterno: data.apPaterno ?? null,
           amMaterno: data.amMaterno ?? null,

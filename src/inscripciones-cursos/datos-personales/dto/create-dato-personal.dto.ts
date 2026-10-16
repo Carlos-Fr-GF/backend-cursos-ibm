@@ -18,7 +18,7 @@ export class CreateDatoPersonalDto {
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  escuela?: string | null;
+  institucion?: string | null;
 
   @IsOptional()
   @IsString()

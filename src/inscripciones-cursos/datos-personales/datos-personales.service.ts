@@ -27,7 +27,7 @@ export class DatosPersonalesService {
     await this.findCargoOrFail(data.idCargo);
     const datoPersonal = this.datoPersonalRepository.create({
       cct: this.normalizarOpcional(data.cct),
-      escuela: this.normalizarOpcional(data.escuela),
+      institucion: this.normalizarOpcional(data.institucion),
       nombre: this.normalizarOpcional(data.nombre),
       apPaterno: this.normalizarOpcional(data.apPaterno),
       amMaterno: this.normalizarOpcional(data.amMaterno),
@@ -47,8 +47,8 @@ export class DatosPersonalesService {
     if (data.cct !== undefined) {
       datoPersonal.cct = this.normalizarOpcional(data.cct);
     }
-    if (data.escuela !== undefined) {
-      datoPersonal.escuela = this.normalizarOpcional(data.escuela);
+    if (data.institucion !== undefined) {
+      datoPersonal.institucion = this.normalizarOpcional(data.institucion);
     }
     if (data.nombre !== undefined) {
       datoPersonal.nombre = this.normalizarOpcional(data.nombre);

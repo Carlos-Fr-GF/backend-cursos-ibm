@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CreateInscripcionCursoDto } from './dto/create-inscripcion-curso.dto';
 import { UpdateInscripcionCursoDto } from './dto/update-inscripcion-curso.dto';
@@ -30,6 +31,43 @@ export class InscripcionesCursosController {
   @Get('vista')
   findAllVista() {
     return this.inscripcionesCursosService.findAllVista();
+  }
+
+  @Get('vista/curso/:idCurso')
+  findVistaByCurso(
+    @Param('idCurso', ParseIntPipe) idCurso: number,
+  ) {
+    return this.inscripcionesCursosService.findVistaByCurso(idCurso);
+  }
+
+  @Get('vista/nivel/:nivel')
+  findVistaByCursoAndNivel(
+    @Param('nivel', ParseIntPipe) nivel: number,
+    @Query('idCurso', ParseIntPipe) idCurso: number,
+  ) {
+    return this.inscripcionesCursosService.findVistaByCursoAndNivel(
+      idCurso,
+      nivel,
+    );
+  }
+
+  @Get('conteo')
+  countByCursoAndNivel(
+    @Query('idCurso', ParseIntPipe) idCurso: number,
+    @Query('nivel', ParseIntPipe) nivel: number,
+  ) {
+    return this.inscripcionesCursosService.countByCursoAndNivel(idCurso, nivel);
+  }
+
+  @Get('cupos')
+  getCapacityByCursoAndNivel(
+    @Query('idCurso', ParseIntPipe) idCurso: number,
+    @Query('nivel', ParseIntPipe) nivel: number,
+  ) {
+    return this.inscripcionesCursosService.getCapacityByCursoAndNivel(
+      idCurso,
+      nivel,
+    );
   }
 
   // @UseGuards( JwtCookieGuard, RolesGuard)

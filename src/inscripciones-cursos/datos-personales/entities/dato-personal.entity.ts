@@ -15,8 +15,8 @@ export class DatoPersonal {
   @Column({ name: 'cct', type: 'varchar', length: 10, nullable: true })
   cct!: string | null;
 
-  @Column({ name: 'escuela', type: 'varchar', length: 50, nullable: true })
-  escuela!: string | null;
+  @Column({ name: 'institucion', type: 'varchar', length: 50, nullable: true })
+  institucion!: string | null;
 
   @Column({ name: 'nombre', type: 'varchar', length: 30, nullable: true })
   nombre!: string | null;

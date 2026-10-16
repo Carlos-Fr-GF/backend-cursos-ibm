@@ -12,6 +12,7 @@ import { csrfMiddleware } from './auth/csrf.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api-backend');
   const configService = app.get(ConfigService);
   const allowedOrigin = getFrontendOrigin(configService);
 
