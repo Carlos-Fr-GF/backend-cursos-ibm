@@ -5,13 +5,16 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  UseGuards,
   Patch,
   Post,
 } from '@nestjs/common';
 import { CreateSubnivelDto } from './dto/create-subnivel.dto';
 import { UpdateSubnivelDto } from './dto/update-subnivel.dto';
 import { SubnivelesService } from './subniveles.service';
-
+import { JwtCookieGuard } from '../auth/jwt-cookie.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 @Controller('subniveles')
 export class SubnivelesController {
   constructor(private readonly subnivelesService: SubnivelesService) {}
@@ -36,15 +39,15 @@ export class SubnivelesController {
     return this.subnivelesService.findOne(id);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateSubnivelDto) {
     return this.subnivelesService.create(data);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -53,8 +56,8 @@ export class SubnivelesController {
     return this.subnivelesService.update(id, data);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.subnivelesService.remove(id);

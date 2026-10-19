@@ -22,8 +22,8 @@ export class AsignacionesCursosController {
     private readonly asignacionesCursosService: AsignacionesCursosService,
   ) {}
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get()
   findAll() {
     return this.asignacionesCursosService.findAll();
@@ -39,22 +39,22 @@ export class AsignacionesCursosController {
     return this.asignacionesCursosService.findCuposPorSubnivel();
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.asignacionesCursosService.findOne(id);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateAsignacionCursoDto) {
     return this.asignacionesCursosService.create(data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -63,8 +63,8 @@ export class AsignacionesCursosController {
     return this.asignacionesCursosService.update(id, data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.asignacionesCursosService.remove(id);

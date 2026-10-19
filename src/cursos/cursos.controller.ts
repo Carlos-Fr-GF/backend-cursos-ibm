@@ -7,14 +7,15 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-import { UseGuards } from '@nestjs/common';
-import { JwtCookieGuard } from '../auth/jwt-cookie.guard';
-import { RolesGuard } from '../auth/roles.guard';
+
 import { CreateCursoDto } from './dto/create-curso.dto';
 import { UpdateCursoDto } from './dto/update-curso.dto';
 import { CursosService } from './cursos.service';
-
+import { JwtCookieGuard } from '../auth/jwt-cookie.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 @Controller('cursos')
 export class CursosController {
   constructor(private readonly cursosService: CursosService) {}
@@ -28,22 +29,22 @@ export class CursosController {
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.cursosService.findOne(id);
   }
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateCursoDto) {
     return this.cursosService.create(data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateCursoDto) {
     return this.cursosService.update(id, data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.cursosService.remove(id);

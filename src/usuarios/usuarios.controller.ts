@@ -20,7 +20,7 @@ import type { AuthenticatedRequest } from '../auth/request-user';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 
-// @UseGuards(JwtCookieGuard)
+@UseGuards(JwtCookieGuard)
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
@@ -63,15 +63,15 @@ export class UsuariosController {
     return this.usuariosService.update(id, data, req.user!.sub);
   }
 
-   @UseGuards(JwtCookieGuard, RolesGuard)
+  @UseGuards(JwtCookieGuard, RolesGuard)
   @Roles(0)
   @Patch(':id/activar')
   activate(@Param('id', ParseIntPipe) id: number) {
     return this.usuariosService.activate(id);
   }
 
-   @UseGuards(JwtCookieGuard, RolesGuard)
-   @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id/desactivar')
   deactivate(
     @Param('id', ParseIntPipe) id: number,

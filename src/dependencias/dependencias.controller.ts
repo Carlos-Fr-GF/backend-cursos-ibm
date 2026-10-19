@@ -30,15 +30,15 @@ export class DependenciasController {
     return this.dependenciasService.findOne(id);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateDependenciaDto) {
     return this.dependenciasService.create(data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -47,8 +47,8 @@ export class DependenciasController {
     return this.dependenciasService.update(id, data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.dependenciasService.remove(id);

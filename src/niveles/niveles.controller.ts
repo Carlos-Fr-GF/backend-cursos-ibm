@@ -30,22 +30,22 @@ export class NivelesController {
     return this.nivelesService.findOne(id);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateNivelDto) {
     return this.nivelesService.create(data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateNivelDto) {
     return this.nivelesService.update(id, data);
   }
 
-  // @UseGuards( JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards( JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.nivelesService.remove(id);

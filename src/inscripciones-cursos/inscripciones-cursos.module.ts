@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module';
 import { Cargo } from '../cargos/entities/cargo.entity';
 import { Subnivel } from '../subniveles/entities/subnivel.entity';
 import { AsignacionCurso } from '../asignaciones-cursos/entities/asignacion-curso.entity';
@@ -22,6 +23,7 @@ import { InscripcionCurso } from './entities/inscripcion-curso.entity';
       Cargo,
       Subnivel,
     ]),
+    AuthModule,
     DatosPersonalesModule,
   ],
   controllers: [InscripcionesCursosController],
