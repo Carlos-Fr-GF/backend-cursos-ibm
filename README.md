@@ -389,10 +389,61 @@ arbitrariamente. Para modificar una asignación existente, usa
 | Método   | Ruta                       | Protección                                 | Función                                                           |
 | -------- | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
 | `GET`    | `/asignaciones-cursos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista asignaciones.                                               |
+| `GET`    | `/asignaciones-cursos/cupos-por-nivel` | 🔓 Ninguna | Lee `v_cupos_por_nivel`, con cupos por nivel y total del curso. |
+| `GET`    | `/asignaciones-cursos/cupos-por-subnivel` | 🔓 Ninguna | Lee `v_cupos_por_subnivel`, con cupos por subnivel/dependencia y total por nivel. |
 | `GET`    | `/asignaciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una asignación.                                           |
 | `POST`   | `/asignaciones-cursos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Asigna curso, nivel, cupo y, opcionalmente, subnivel/dependencia. |
 | `PATCH`  | `/asignaciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente una asignación.                            |
 | `DELETE` | `/asignaciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina una asignación.                                           |
+
+Las dos rutas de cupos no reciben parámetros. Las vistas `v_cupos_por_nivel` y
+`v_cupos_por_subnivel` deben existir previamente en MySQL. Ejemplos de URL local:
+
+```text
+GET http://localhost:3000/asignaciones-cursos/cupos-por-nivel
+GET http://localhost:3000/asignaciones-cursos/cupos-por-subnivel
+```
+
+Si Nginx publica la API bajo `/api-backend`, antepón ese prefijo a la ruta
+pública, por ejemplo:
+`https://tu-dominio/api-backend/asignaciones-cursos/cupos-por-nivel`.
+
+La ruta `cupos-por-nivel` devuelve las filas de la vista: un detalle por nivel
+y un total por curso. La ruta `cupos-por-subnivel` agrupa las filas por curso y
+nivel; cada elemento contiene `cupoTotalAsignado` y un arreglo `opciones` con
+el nombre del subnivel o de la dependencia y su cupo asignado. Ejemplo:
+
+```json
+[
+  {
+    "idCurso": 1,
+    "nombreCurso": "Curso de ejemplo",
+    "idNivel": 2,
+    "nombreNivel": "Educación básica",
+    "cupoTotalAsignado": 15,
+    "opciones": [
+      {
+        "idAsignacion": 8,
+        "idSubnivel": 3,
+        "nombreSubnivel": "Primaria",
+        "idDependencias": null,
+        "nombreDependencia": null,
+        "tipoOpcion": "SUBNIVEL",
+        "cupoAsignado": 10
+      },
+      {
+        "idAsignacion": 9,
+        "idSubnivel": null,
+        "nombreSubnivel": null,
+        "idDependencias": 4,
+        "nombreDependencia": "Secretaría de Educación",
+        "tipoOpcion": "DEPENDENCIA",
+        "cupoAsignado": 5
+      }
+    ]
+  }
+]
+```
 
 Body de `POST /asignaciones-cursos`:
 
@@ -447,46 +498,6 @@ La columna `subnivel` de la vista debe devolver el nombre del subnivel, no su
 ID. Para ello, une `inscripciones_cursos` con `cat_subniveles` y selecciona
 `s.subnivel`. Esta definición conserva el nombre `subnivel` que espera el
 endpoint:
-
-```sql
-CREATE OR REPLACE
-    ALGORITHM = UNDEFINED
-    DEFINER = `cursos_app`@`%`
-    SQL SECURITY DEFINER
-VIEW `v_inscripciones_cursos` AS
-SELECT
-    ic.id_inscripcion AS id_inscripcion,
-    ic.id_curso AS id_curso,
-    c.nombre AS curso,
-    ic.nivel AS id_nivel,
-    n.nivel AS nivel,
-    s.subnivel AS subnivel,
-    ic.dependencia AS dependencia,
-    cargo.cargo AS cargo,
-    dp.cct AS cct,
-    dp.institucion AS institucion,
-    dp.nombre AS nombre,
-    dp.ap_paterno AS apellido_paterno,
-    dp.am_materno AS apellido_materno,
-    dp.correo AS correo,
-    ic.fecha_registro AS fecha_registro
-FROM inscripciones_cursos AS ic
-LEFT JOIN cursos AS c
-    ON c.id_curso = ic.id_curso
-LEFT JOIN cat_niveles AS n
-    ON n.id_nivel = ic.nivel
-LEFT JOIN cat_subniveles AS s
-    ON s.id_subnivel = ic.id_subnivel
-   AND s.id_nivel = ic.nivel
-LEFT JOIN datos_personales AS dp
-    ON dp.id_datos_personales = ic.id_datos_personales
-LEFT JOIN cat_cargo AS cargo
-    ON cargo.id_cargo = dp.id_cargo;
-```
-
-Al reemplazar una vista existente, verifica que `cursos_app`@`%` exista en
-MySQL y tenga acceso a las tablas. Si usas otro usuario, sustituye el `DEFINER`
-por una cuenta válida o elimina esa cláusula y usa `SQL SECURITY INVOKER`.
 
 
 #### Validación de cupos al inscribir

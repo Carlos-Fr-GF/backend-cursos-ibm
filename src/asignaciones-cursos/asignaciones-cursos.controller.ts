@@ -29,6 +29,16 @@ export class AsignacionesCursosController {
     return this.asignacionesCursosService.findAll();
   }
 
+  @Get('cupos-por-nivel')
+  findCuposPorNivel() {
+    return this.asignacionesCursosService.findCuposPorNivel();
+  }
+
+  @Get('cupos-por-subnivel')
+  findCuposPorSubnivel() {
+    return this.asignacionesCursosService.findCuposPorSubnivel();
+  }
+
   // @UseGuards( JwtCookieGuard, RolesGuard)
   // @Roles(0)
   @Get(':id')

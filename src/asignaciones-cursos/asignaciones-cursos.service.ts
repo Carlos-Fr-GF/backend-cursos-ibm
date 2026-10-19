@@ -12,6 +12,48 @@ import { CreateAsignacionCursoDto } from './dto/create-asignacion-curso.dto';
 import { UpdateAsignacionCursoDto } from './dto/update-asignacion-curso.dto';
 import { AsignacionCurso } from './entities/asignacion-curso.entity';
 
+export interface CuposPorNivelRow {
+  idCurso: number | string;
+  nombreCurso: string;
+  idNivel: number | string | null;
+  nombreNivel: string;
+  cupoNivel: number | string;
+  tipoFila: string;
+}
+
+interface CuposPorSubnivelRow {
+  idAsignacion: number | string | null;
+  idCurso: number | string;
+  nombreCurso: string;
+  idNivel: number | string;
+  nombreNivel: string;
+  idSubnivel: number | string | null;
+  nombreSubnivel: string | null;
+  idDependencias: number | string | null;
+  nombreDependencia: string | null;
+  nombreOpcion: string;
+  cupoSubnivel: number | string;
+  tipoOpcion: string;
+  tipoFila: string;
+}
+
+export interface CuposPorSubnivelGrupo {
+  idCurso: number;
+  nombreCurso: string;
+  idNivel: number;
+  nombreNivel: string;
+  cupoTotalAsignado: number;
+  opciones: {
+    idAsignacion: number;
+    idSubnivel: number | null;
+    nombreSubnivel: string | null;
+    idDependencias: number | null;
+    nombreDependencia: string | null;
+    tipoOpcion: string;
+    cupoAsignado: number;
+  }[];
+}
+
 @Injectable()
 export class AsignacionesCursosService {
   constructor(
@@ -27,6 +69,97 @@ export class AsignacionesCursosService {
 
   findAll(): Promise<AsignacionCurso[]> {
     return this.asignacionRepository.find();
+  }
+
+  async findCuposPorNivel(): Promise<CuposPorNivelRow[]> {
+    const rows = await this.asignacionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_curso', 'idCurso')
+      .addSelect('vista.nombre_curso', 'nombreCurso')
+      .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.nombre_nivel', 'nombreNivel')
+      .addSelect('vista.cupo_nivel', 'cupoNivel')
+      .addSelect('vista.tipo_fila', 'tipoFila')
+      .from('v_cupos_por_nivel', 'vista')
+      .orderBy('vista.id_curso', 'ASC')
+      .addOrderBy('vista.id_nivel', 'ASC')
+      .addOrderBy('vista.tipo_fila', 'ASC')
+      .getRawMany<CuposPorNivelRow>();
+
+    return rows.map((row) => ({
+      ...row,
+      idCurso: Number(row.idCurso),
+      idNivel: row.idNivel === null ? null : Number(row.idNivel),
+      cupoNivel: Number(row.cupoNivel),
+    }));
+  }
+
+  async findCuposPorSubnivel(): Promise<CuposPorSubnivelGrupo[]> {
+    const rows = await this.asignacionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_asignacion', 'idAsignacion')
+      .addSelect('vista.id_curso', 'idCurso')
+      .addSelect('vista.nombre_curso', 'nombreCurso')
+      .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.nombre_nivel', 'nombreNivel')
+      .addSelect('vista.id_subnivel', 'idSubnivel')
+      .addSelect('vista.nombre_subnivel', 'nombreSubnivel')
+      .addSelect('vista.id_dependencias', 'idDependencias')
+      .addSelect('vista.nombre_dependencia', 'nombreDependencia')
+      .addSelect('vista.nombre_opcion', 'nombreOpcion')
+      .addSelect('vista.cupo_subnivel', 'cupoSubnivel')
+      .addSelect('vista.tipo_opcion', 'tipoOpcion')
+      .addSelect('vista.tipo_fila', 'tipoFila')
+      .from('v_cupos_por_subnivel', 'vista')
+      .orderBy('vista.id_curso', 'ASC')
+      .addOrderBy('vista.id_nivel', 'ASC')
+      .addOrderBy('vista.tipo_fila', 'ASC')
+      .addOrderBy('vista.nombre_opcion', 'ASC')
+      .getRawMany<CuposPorSubnivelRow>();
+
+    const grupos = new Map<string, CuposPorSubnivelGrupo>();
+
+    for (const row of rows) {
+      const idCurso = Number(row.idCurso);
+      const idNivel = Number(row.idNivel);
+      const key = `${idCurso}:${idNivel}`;
+      let grupo = grupos.get(key);
+
+      if (!grupo) {
+        grupo = {
+          idCurso,
+          nombreCurso: row.nombreCurso,
+          idNivel,
+          nombreNivel: row.nombreNivel,
+          cupoTotalAsignado: 0,
+          opciones: [],
+        };
+        grupos.set(key, grupo);
+      }
+
+      if (row.tipoFila === 'TOTAL') {
+        grupo.cupoTotalAsignado = Number(row.cupoSubnivel);
+        continue;
+      }
+
+      if (row.idAsignacion === null) {
+        continue;
+      }
+
+      grupo.opciones.push({
+        idAsignacion: Number(row.idAsignacion),
+        idSubnivel:
+          row.idSubnivel === null ? null : Number(row.idSubnivel),
+        nombreSubnivel: row.nombreSubnivel,
+        idDependencias:
+          row.idDependencias === null ? null : Number(row.idDependencias),
+        nombreDependencia: row.nombreDependencia,
+        tipoOpcion: row.tipoOpcion,
+        cupoAsignado: Number(row.cupoSubnivel),
+      });
+    }
+
+    return Array.from(grupos.values());
   }
 
   async findOne(id: number): Promise<AsignacionCurso> {
