@@ -30,7 +30,7 @@ export class CreateInscripcionCursoDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(50)
+  @MaxLength(100)
   institucion?: string | null;
 
   @IsOptional()

@@ -22,7 +22,7 @@ interface InscripcionCursoVistaRow {
   curso: string;
   idNivel: number | string;
   nivel: string;
-  subnivel: number | string | null;
+  subnivel: string | null;
   dependencia: number | string | null;
   cargo: string | null;
   cct: string | null;
@@ -48,7 +48,7 @@ export interface InscripcionCursoVista {
   curso: string;
   idNivel: number;
   nivel: string;
-  subnivel: number | null;
+  subnivel: string | null;
   dependencia: number | null;
   cargo: string | null;
   cct: string | null;
@@ -178,7 +178,7 @@ export class InscripcionesCursosService {
       curso: row.curso,
       idNivel: Number(row.idNivel),
       nivel: row.nivel,
-      subnivel: row.subnivel === null ? null : Number(row.subnivel),
+      subnivel: row.subnivel,
       dependencia:
         row.dependencia === null ? null : Number(row.dependencia),
       cargo: row.cargo,

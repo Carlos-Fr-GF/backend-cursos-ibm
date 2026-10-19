@@ -25,15 +25,15 @@ import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get()
   findAll() {
     return this.usuariosService.findAll();
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('correo/:correo')
   async findByCorreo(@Param('correo') correo: string) {
     const usuario = await this.usuariosService.findByCorreo(correo);
@@ -45,15 +45,15 @@ export class UsuariosController {
     return usuario;
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Post()
   create(@Body() data: CreateUsuarioDto) {
     return this.usuariosService.create(data);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -63,15 +63,15 @@ export class UsuariosController {
     return this.usuariosService.update(id, data, req.user!.sub);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+   @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Patch(':id/activar')
   activate(@Param('id', ParseIntPipe) id: number) {
     return this.usuariosService.activate(id);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+   @UseGuards(JwtCookieGuard, RolesGuard)
+   @Roles(0)
   @Patch(':id/desactivar')
   deactivate(
     @Param('id', ParseIntPipe) id: number,
@@ -80,8 +80,8 @@ export class UsuariosController {
     return this.usuariosService.deactivate(id, req.user!.sub);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usuariosService.remove(id);

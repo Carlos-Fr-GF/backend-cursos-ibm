@@ -443,6 +443,50 @@ las vistas que se describen a continuación.
 todas las inscripciones con los datos del curso, nivel, subnivel, dependencia,
 persona y cargo. Las rutas de consulta filtrada utilizan esta misma vista.
 
+La columna `subnivel` de la vista debe devolver el nombre del subnivel, no su
+ID. Para ello, une `inscripciones_cursos` con `cat_subniveles` y selecciona
+`s.subnivel`. Esta definición conserva el nombre `subnivel` que espera el
+endpoint:
+
+```sql
+CREATE OR REPLACE
+    ALGORITHM = UNDEFINED
+    DEFINER = `cursos_app`@`%`
+    SQL SECURITY DEFINER
+VIEW `v_inscripciones_cursos` AS
+SELECT
+    ic.id_inscripcion AS id_inscripcion,
+    ic.id_curso AS id_curso,
+    c.nombre AS curso,
+    ic.nivel AS id_nivel,
+    n.nivel AS nivel,
+    s.subnivel AS subnivel,
+    ic.dependencia AS dependencia,
+    cargo.cargo AS cargo,
+    dp.cct AS cct,
+    dp.institucion AS institucion,
+    dp.nombre AS nombre,
+    dp.ap_paterno AS apellido_paterno,
+    dp.am_materno AS apellido_materno,
+    dp.correo AS correo,
+    ic.fecha_registro AS fecha_registro
+FROM inscripciones_cursos AS ic
+LEFT JOIN cursos AS c
+    ON c.id_curso = ic.id_curso
+LEFT JOIN cat_niveles AS n
+    ON n.id_nivel = ic.nivel
+LEFT JOIN cat_subniveles AS s
+    ON s.id_subnivel = ic.id_subnivel
+   AND s.id_nivel = ic.nivel
+LEFT JOIN datos_personales AS dp
+    ON dp.id_datos_personales = ic.id_datos_personales
+LEFT JOIN cat_cargo AS cargo
+    ON cargo.id_cargo = dp.id_cargo;
+```
+
+Al reemplazar una vista existente, verifica que `cursos_app`@`%` exista en
+MySQL y tenga acceso a las tablas. Si usas otro usuario, sustituye el `DEFINER`
+por una cuenta válida o elimina esa cláusula y usa `SQL SECURITY INVOKER`.
 
 
 #### Validación de cupos al inscribir
@@ -557,8 +601,9 @@ Ejemplo de inscripción general, sin subnivel ni dependencia:
 `GET /inscripciones-cursos/vista` devuelve cada inscripción como un registro
 plano, con `idCurso`, nombre del curso, `idNivel`, nombre del nivel, subnivel,
 dependencia, cargo, datos personales y `fechaRegistro`. Si no hay cargo
-asociado, `cargo` será `null`. La fecha se genera en MySQL y no se envía en el
-body.
+asociado, `cargo` será `null`; `subnivel` contiene el nombre del catálogo o
+`null` si la inscripción no tiene uno. La fecha se genera en MySQL y no se
+envía en el body.
 
 Body parcial de `PATCH /inscripciones-cursos/:id`:
 
