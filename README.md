@@ -184,6 +184,41 @@ Body parcial de `PATCH /usuarios/:id` (todos los campos son opcionales):
 
 Los endpoints de activación/desactivación y eliminación no requieren body.
 
+### Roles
+
+El catálogo `cat_roles` almacena los roles disponibles. `id_rol` es una clave
+primaria asignada por quien crea el registro, no es autoincremental. `clave` y
+`rol` son opcionales; `fecha_registro` la administra MySQL. Las rutas de lectura
+son públicas y las de escritura requieren JWT por cookie y rol administrativo
+`0`.
+
+| Método   | Ruta         | Protección                                 | Función                 |
+| -------- | ------------ | ------------------------------------------ | ----------------------- |
+| `GET`    | `/roles`     | 🔓 Ninguna                                 | Lista los roles.        |
+| `GET`    | `/roles/:id` | 🔓 Ninguna                                 | Obtiene un rol por ID.  |
+| `POST`   | `/roles`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Crea un rol.            |
+| `PATCH`  | `/roles/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza clave o rol.  |
+| `DELETE` | `/roles/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Elimina un rol.         |
+
+Body de `POST /roles`:
+
+```json
+{
+  "idRol": 2,
+  "clave": "NR",
+  "rol": "Nuevo rol"
+}
+```
+
+`idRol` es obligatorio. `clave` y `rol` se pueden omitir o enviar como `null`.
+Body parcial de `PATCH /roles/:id`:
+
+```json
+{
+  "rol": "rol"
+}
+```
+
 ### Niveles
 
 Las rutas de lectura no tienen guard indicado. Para creación, edición y

@@ -23,11 +23,14 @@ export class InscripcionesCursosController {
     private readonly inscripcionesCursosService: InscripcionesCursosService,
   ) {}
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
   @Get()
   findAll() {
     return this.inscripcionesCursosService.findAll();
+  }
+
+    @Post()
+  create(@Body() data: CreateInscripcionCursoDto) {
+    return this.inscripcionesCursosService.create(data);
   }
 
   @UseGuards(JwtCookieGuard, RolesGuard)
@@ -44,8 +47,8 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.findVistaByCurso(idCurso);
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
   @Get('vista/nivel/:nivel')
   findVistaByCursoAndNivel(
     @Param('nivel', ParseIntPipe) nivel: number,
@@ -67,8 +70,8 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.countByCursoAndNivel(idCurso, nivel);
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
   @Get('cupos')
   getCapacityByCursoAndNivel(
     @Query('idCurso', ParseIntPipe) idCurso: number,
@@ -80,19 +83,13 @@ export class InscripcionesCursosController {
     );
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.inscripcionesCursosService.findOne(id);
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
-  @Post()
-  create(@Body() data: CreateInscripcionCursoDto) {
-    return this.inscripcionesCursosService.create(data);
-  }
+
 
   @UseGuards(JwtCookieGuard, RolesGuard)
   @Roles(0)

@@ -15,6 +15,7 @@ import { AsignacionesCursosModule } from './asignaciones-cursos/asignaciones-cur
 import { InscripcionesCursosModule } from './inscripciones-cursos/inscripciones-cursos.module';
 import { CargosModule } from './cargos/cargos.module';
 import { SubnivelesModule } from './subniveles/subniveles.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SubnivelesModule } from './subniveles/subniveles.module';
     InscripcionesCursosModule,
     CargosModule,
     SubnivelesModule,
+    RolesModule,
   ],
 
   controllers: [AppController],
