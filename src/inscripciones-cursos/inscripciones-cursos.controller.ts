@@ -22,13 +22,14 @@ export class InscripcionesCursosController {
   constructor(
     private readonly inscripcionesCursosService: InscripcionesCursosService,
   ) {}
-
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get()
   findAll() {
     return this.inscripcionesCursosService.findAll();
   }
 
-    @Post()
+  @Post()
   create(@Body() data: CreateInscripcionCursoDto) {
     return this.inscripcionesCursosService.create(data);
   }
@@ -47,8 +48,8 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.findVistaByCurso(idCurso);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('vista/nivel/:nivel')
   findVistaByCursoAndNivel(
     @Param('nivel', ParseIntPipe) nivel: number,
@@ -62,6 +63,24 @@ export class InscripcionesCursosController {
 
   @UseGuards(JwtCookieGuard, RolesGuard)
   @Roles(0)
+  @Get('conteo-por-subnivel')
+  findInscripcionesPorSubnivel() {
+    return this.inscripcionesCursosService.findInscripcionesPorSubnivel();
+  }
+
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
+  @Get('conteo-por-subnivel/curso/:idCurso')
+  findInscripcionesPorSubnivelByCurso(
+    @Param('idCurso', ParseIntPipe) idCurso: number,
+  ) {
+    return this.inscripcionesCursosService.findInscripcionesPorSubnivel(
+      idCurso,
+    );
+  }
+
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('conteo')
   countByCursoAndNivel(
     @Query('idCurso', ParseIntPipe) idCurso: number,
@@ -70,8 +89,8 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.countByCursoAndNivel(idCurso, nivel);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('cupos')
   getCapacityByCursoAndNivel(
     @Query('idCurso', ParseIntPipe) idCurso: number,
@@ -83,13 +102,12 @@ export class InscripcionesCursosController {
     );
   }
 
-
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.inscripcionesCursosService.findOne(id);
   }
-
-
 
   @UseGuards(JwtCookieGuard, RolesGuard)
   @Roles(0)

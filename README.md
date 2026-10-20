@@ -424,8 +424,8 @@ arbitrariamente. Para modificar una asignación existente, usa
 | Método   | Ruta                       | Protección                                 | Función                                                           |
 | -------- | -------------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
 | `GET`    | `/asignaciones-cursos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista asignaciones.                                               |
-| `GET`    | `/asignaciones-cursos/cupos-por-nivel` | 🔓 Ninguna | Lee `v_cupos_por_nivel`, con cupos por nivel y total del curso. |
-| `GET`    | `/asignaciones-cursos/cupos-por-subnivel` | 🔓 Ninguna | Lee `v_cupos_por_subnivel`, con cupos por subnivel/dependencia y total por nivel. |
+| `GET`    | `/asignaciones-cursos/cupos-por-nivel` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lee `v_cupos_por_nivel`, con cupos por nivel y total del curso. |
+| `GET`    | `/asignaciones-cursos/cupos-por-subnivel` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lee `v_cupos_por_subnivel`, con cupos por subnivel/dependencia y total por nivel. |
 | `GET`    | `/asignaciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una asignación.                                           |
 | `POST`   | `/asignaciones-cursos`     | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Asigna curso, nivel, cupo y, opcionalmente, subnivel/dependencia. |
 | `PATCH`  | `/asignaciones-cursos/:id` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Actualiza parcialmente una asignación.                            |
@@ -575,6 +575,8 @@ distintos está permitido.
 | `GET`    | `/inscripciones-cursos/vista` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Lista inscripciones con curso, nivel, datos personales y cargo. |
 | `GET`    | `/inscripciones-cursos/vista/curso/:idCurso` | 🔓 Ninguna | Lista las inscripciones de un curso, sin filtrar por nivel ni subnivel. |
 | `GET`    | `/inscripciones-cursos/vista/nivel/:nivel?idCurso=:idCurso` | 🔓 Ninguna | Filtra las inscripciones por curso y nivel. |
+| `GET`    | `/inscripciones-cursos/conteo-por-subnivel` | 🔓 Ninguna | Agrupa por curso y nivel; incluye un arreglo de subniveles con sus conteos. |
+| `GET`    | `/inscripciones-cursos/conteo-por-subnivel/curso/:idCurso` | 🔓 Ninguna | Devuelve el mismo agrupamiento para el curso indicado. |
 | `GET`    | `/inscripciones-cursos/conteo?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Cuenta las inscripciones de un curso y nivel. |
 | `GET`    | `/inscripciones-cursos/cupos?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Devuelve el cupo del nivel, las plazas ocupadas y las disponibles. |
 | `GET`    | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una inscripción.                                        |
@@ -589,8 +591,45 @@ nivel. El filtro por curso solo requiere el ID del curso. Ejemplos:
 ```text
 GET /inscripciones-cursos/vista/nivel/2?idCurso=1
 GET /inscripciones-cursos/vista/curso/1
+GET /inscripciones-cursos/conteo-por-subnivel
+GET /inscripciones-cursos/conteo-por-subnivel/curso/1
 GET /inscripciones-cursos/conteo?idCurso=1&nivel=2
 GET /inscripciones-cursos/cupos?idCurso=1&nivel=2
+```
+
+Las dos rutas de conteo por subnivel consultan `v_inscripciones_por_subnivel`.
+La primera devuelve los resultados de todos los cursos; la segunda los filtra
+por `idCurso`. La respuesta agrupa las filas por curso y nivel; cada nivel
+contiene un arreglo `subniveles`, con el cupo y el número de inscripciones de
+cada subnivel. La vista debe estar creada en MySQL previamente. Incluye los
+subniveles asignados aunque no tengan inscripciones, con `totalInscripciones`
+en `0`.
+
+Ejemplo de respuesta:
+
+```json
+[
+  {
+    "idCurso": 1,
+    "nombreCurso": "Curso de ejemplo",
+    "idNivel": 3,
+    "nombreNivel": "Educación básica",
+    "subniveles": [
+      {
+        "idSubnivel": 5,
+        "nombreSubnivel": "Primaria",
+        "cupoAsignado": 20,
+        "totalInscripciones": 12
+      },
+      {
+        "idSubnivel": 6,
+        "nombreSubnivel": "Secundaria",
+        "cupoAsignado": 15,
+        "totalInscripciones": 0
+      }
+    ]
+  }
+]
 ```
 
 `GET /inscripciones-cursos/cupos` consulta la vista `vista_cupos_nivel`.

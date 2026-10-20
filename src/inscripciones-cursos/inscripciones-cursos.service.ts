@@ -42,6 +42,30 @@ interface CuposNivelRow {
   cuposDisponibles: number | string;
 }
 
+interface InscripcionesPorSubnivelRow {
+  idCurso: number | string;
+  nombreCurso: string;
+  idNivel: number | string;
+  nombreNivel: string;
+  idSubnivel: number | string;
+  nombreSubnivel: string;
+  cupoAsignado: number | string;
+  totalInscripciones: number | string;
+}
+
+export interface InscripcionesPorSubnivelNivel {
+  idCurso: number;
+  nombreCurso: string;
+  idNivel: number;
+  nombreNivel: string;
+  subniveles: {
+    idSubnivel: number;
+    nombreSubnivel: string;
+    cupoAsignado: number;
+    totalInscripciones: number;
+  }[];
+}
+
 export interface InscripcionCursoVista {
   idInscripcion: number;
   idCurso: number;
@@ -88,6 +112,62 @@ export class InscripcionesCursosService {
     nivel: number,
   ): Promise<InscripcionCursoVista[]> {
     return this.queryVista(idCurso, nivel);
+  }
+
+  findInscripcionesPorSubnivel(
+    idCurso?: number,
+  ): Promise<InscripcionesPorSubnivelNivel[]> {
+    const query = this.inscripcionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_curso', 'idCurso')
+      .addSelect('vista.nombre_curso', 'nombreCurso')
+      .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.nombre_nivel', 'nombreNivel')
+      .addSelect('vista.id_subnivel', 'idSubnivel')
+      .addSelect('vista.nombre_subnivel', 'nombreSubnivel')
+      .addSelect('vista.cupo_asignado', 'cupoAsignado')
+      .addSelect('vista.total_inscripciones', 'totalInscripciones')
+      .from('v_inscripciones_por_subnivel', 'vista');
+
+    if (idCurso !== undefined) {
+      query.where('vista.id_curso = :idCurso', { idCurso });
+    }
+
+    return query
+      .orderBy('vista.id_curso', 'ASC')
+      .addOrderBy('vista.id_nivel', 'ASC')
+      .addOrderBy('vista.nombre_subnivel', 'ASC')
+      .getRawMany<InscripcionesPorSubnivelRow>()
+      .then((rows) => {
+        const niveles = new Map<string, InscripcionesPorSubnivelNivel>();
+
+        for (const row of rows) {
+          const idCurso = Number(row.idCurso);
+          const idNivel = Number(row.idNivel);
+          const key = `${idCurso}:${idNivel}`;
+          let nivel = niveles.get(key);
+
+          if (!nivel) {
+            nivel = {
+              idCurso,
+              nombreCurso: row.nombreCurso,
+              idNivel,
+              nombreNivel: row.nombreNivel,
+              subniveles: [],
+            };
+            niveles.set(key, nivel);
+          }
+
+          nivel.subniveles.push({
+            idSubnivel: Number(row.idSubnivel),
+            nombreSubnivel: row.nombreSubnivel,
+            cupoAsignado: Number(row.cupoAsignado),
+            totalInscripciones: Number(row.totalInscripciones),
+          });
+        }
+
+        return Array.from(niveles.values());
+      });
   }
 
   async countByCursoAndNivel(
