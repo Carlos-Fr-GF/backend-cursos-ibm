@@ -24,6 +24,7 @@ interface InscripcionCursoVistaRow {
   nivel: string;
   subnivel: string | null;
   dependencia: number | string | null;
+  nombreDependencia: string | null;
   cargo: string | null;
   cct: string | null;
   institucion: string | null;
@@ -74,6 +75,7 @@ export interface InscripcionCursoVista {
   nivel: string;
   subnivel: string | null;
   dependencia: number | null;
+  nombreDependencia: string | null;
   cargo: string | null;
   cct: string | null;
   institucion: string | null;
@@ -229,7 +231,8 @@ export class InscripcionesCursosService {
       .addSelect('vista.id_nivel', 'idNivel')
       .addSelect('vista.nivel', 'nivel')
       .addSelect('vista.subnivel', 'subnivel')
-      .addSelect('vista.dependencia', 'dependencia')
+      .addSelect('vista.id_dependencia', 'dependencia')
+      .addSelect('vista.nombre_dependencia', 'nombreDependencia')
       .addSelect('vista.fecha_registro', 'fechaRegistro')
       .addSelect('vista.cargo', 'cargo')
       .addSelect('vista.cct', 'cct')
@@ -261,6 +264,7 @@ export class InscripcionesCursosService {
       subnivel: row.subnivel,
       dependencia:
         row.dependencia === null ? null : Number(row.dependencia),
+      nombreDependencia: row.nombreDependencia,
       cargo: row.cargo,
       cct: row.cct,
       institucion: row.institucion,

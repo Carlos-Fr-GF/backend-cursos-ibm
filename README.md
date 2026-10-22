@@ -443,6 +443,7 @@ Si Nginx publica la API bajo `/api-backend`, antepón ese prefijo a la ruta
 pública, por ejemplo:
 `https://tu-dominio/api-backend/asignaciones-cursos/cupos-por-nivel`.
 
+
 La ruta `cupos-por-nivel` devuelve las filas de la vista: un detalle por nivel
 y un total por curso. La ruta `cupos-por-subnivel` agrupa las filas por curso y
 nivel; cada elemento contiene `cupoTotalAsignado` y un arreglo `opciones` con
@@ -532,8 +533,9 @@ persona y cargo. Las rutas de consulta filtrada utilizan esta misma vista.
 La columna `subnivel` de la vista debe devolver el nombre del subnivel, no su
 ID. Para ello, une `inscripciones_cursos` con `cat_subniveles` y selecciona
 `s.subnivel`. Esta definición conserva el nombre `subnivel` que espera el
-endpoint:
-
+endpoint. La vista también expone `id_dependencia` y `nombre_dependencia`;
+el campo `dependencia` de la respuesta actual conserva el ID por compatibilidad,
+y `nombreDependencia` contiene el nombre del catálogo.
 
 #### Validación de cupos al inscribir
 

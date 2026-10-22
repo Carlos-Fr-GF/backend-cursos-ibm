@@ -34,15 +34,15 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.create(data);
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
   @Get('vista')
   findAllVista() {
     return this.inscripcionesCursosService.findAllVista();
   }
 
-  @UseGuards(JwtCookieGuard, RolesGuard)
-  @Roles(0)
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
   @Get('vista/curso/:idCurso')
   findVistaByCurso(@Param('idCurso', ParseIntPipe) idCurso: number) {
     return this.inscripcionesCursosService.findVistaByCurso(idCurso);
