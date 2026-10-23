@@ -579,6 +579,8 @@ distintos está permitido.
 | `GET`    | `/inscripciones-cursos/vista/nivel/:nivel?idCurso=:idCurso` | 🔓 Ninguna | Filtra las inscripciones por curso y nivel. |
 | `GET`    | `/inscripciones-cursos/conteo-por-subnivel` | 🔓 Ninguna | Agrupa por curso y nivel; incluye un arreglo de subniveles con sus conteos. |
 | `GET`    | `/inscripciones-cursos/conteo-por-subnivel/curso/:idCurso` | 🔓 Ninguna | Devuelve el mismo agrupamiento para el curso indicado. |
+| `GET`    | `/inscripciones-cursos/conteo-por-dependencia` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Agrupa por curso y nivel; incluye un arreglo de dependencias con sus conteos. |
+| `GET`    | `/inscripciones-cursos/conteo-por-dependencia/curso/:idCurso` | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Devuelve el agrupamiento para el curso indicado. |
 | `GET`    | `/inscripciones-cursos/conteo?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Cuenta las inscripciones de un curso y nivel. |
 | `GET`    | `/inscripciones-cursos/cupos?idCurso=:idCurso&nivel=:nivel` | 🔓 Ninguna | Devuelve el cupo del nivel, las plazas ocupadas y las disponibles. |
 | `GET`    | `/inscripciones-cursos/:id`   | 🔐 JWT por cookie + `RolesGuard` (rol `0`) | Obtiene una inscripción.                                        |
@@ -595,6 +597,8 @@ GET /inscripciones-cursos/vista/nivel/2?idCurso=1
 GET /inscripciones-cursos/vista/curso/1
 GET /inscripciones-cursos/conteo-por-subnivel
 GET /inscripciones-cursos/conteo-por-subnivel/curso/1
+GET /inscripciones-cursos/conteo-por-dependencia
+GET /inscripciones-cursos/conteo-por-dependencia/curso/1
 GET /inscripciones-cursos/conteo?idCurso=1&nivel=2
 GET /inscripciones-cursos/cupos?idCurso=1&nivel=2
 ```
@@ -606,6 +610,11 @@ contiene un arreglo `subniveles`, con el cupo y el número de inscripciones de
 cada subnivel. La vista debe estar creada en MySQL previamente. Incluye los
 subniveles asignados aunque no tengan inscripciones, con `totalInscripciones`
 en `0`.
+
+Las rutas de conteo por dependencia consultan `v_inscripciones_por_dependencia`.
+La ruta sin ID devuelve los resultados de todos los cursos; la ruta
+`/curso/:idCurso` filtra por curso. Agrupan por curso y nivel e incluyen un
+arreglo `dependencias` con el ID, nombre, cupo asignado y total de inscripciones.
 
 Ejemplo de respuesta:
 

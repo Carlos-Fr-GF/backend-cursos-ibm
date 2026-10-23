@@ -34,15 +34,15 @@ export class InscripcionesCursosController {
     return this.inscripcionesCursosService.create(data);
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('vista')
   findAllVista() {
     return this.inscripcionesCursosService.findAllVista();
   }
 
-  // @UseGuards(JwtCookieGuard, RolesGuard)
-  // @Roles(0)
+  @UseGuards(JwtCookieGuard, RolesGuard)
+  @Roles(0)
   @Get('vista/curso/:idCurso')
   findVistaByCurso(@Param('idCurso', ParseIntPipe) idCurso: number) {
     return this.inscripcionesCursosService.findVistaByCurso(idCurso);
@@ -75,6 +75,24 @@ export class InscripcionesCursosController {
     @Param('idCurso', ParseIntPipe) idCurso: number,
   ) {
     return this.inscripcionesCursosService.findInscripcionesPorSubnivel(
+      idCurso,
+    );
+  }
+
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
+  @Get('conteo-por-dependencia')
+  findInscripcionesPorDependencia() {
+    return this.inscripcionesCursosService.findInscripcionesPorDependencia();
+  }
+
+  // @UseGuards(JwtCookieGuard, RolesGuard)
+  // @Roles(0)
+  @Get('conteo-por-dependencia/curso/:idCurso')
+  findInscripcionesPorDependenciaByCurso(
+    @Param('idCurso', ParseIntPipe) idCurso: number,
+  ) {
+    return this.inscripcionesCursosService.findInscripcionesPorDependencia(
       idCurso,
     );
   }

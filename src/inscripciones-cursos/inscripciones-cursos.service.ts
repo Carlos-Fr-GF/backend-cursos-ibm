@@ -67,6 +67,30 @@ export interface InscripcionesPorSubnivelNivel {
   }[];
 }
 
+interface InscripcionesPorDependenciaRow {
+  idCurso: number | string;
+  nombreCurso: string;
+  idNivel: number | string;
+  nombreNivel: string;
+  idDependencias: number | string;
+  nombreDependencia: string;
+  cupoAsignado: number | string;
+  totalInscripciones: number | string;
+}
+
+export interface InscripcionesPorDependenciaNivel {
+  idCurso: number;
+  nombreCurso: string;
+  idNivel: number;
+  nombreNivel: string;
+  dependencias: {
+    idDependencias: number;
+    nombreDependencia: string;
+    cupoAsignado: number;
+    totalInscripciones: number;
+  }[];
+}
+
 export interface InscripcionCursoVista {
   idInscripcion: number;
   idCurso: number;
@@ -163,6 +187,62 @@ export class InscripcionesCursosService {
           nivel.subniveles.push({
             idSubnivel: Number(row.idSubnivel),
             nombreSubnivel: row.nombreSubnivel,
+            cupoAsignado: Number(row.cupoAsignado),
+            totalInscripciones: Number(row.totalInscripciones),
+          });
+        }
+
+        return Array.from(niveles.values());
+      });
+  }
+
+  findInscripcionesPorDependencia(
+    idCurso?: number,
+  ): Promise<InscripcionesPorDependenciaNivel[]> {
+    const query = this.inscripcionRepository.manager
+      .createQueryBuilder()
+      .select('vista.id_curso', 'idCurso')
+      .addSelect('vista.nombre_curso', 'nombreCurso')
+      .addSelect('vista.id_nivel', 'idNivel')
+      .addSelect('vista.nombre_nivel', 'nombreNivel')
+      .addSelect('vista.id_dependencias', 'idDependencias')
+      .addSelect('vista.nombre_dependencia', 'nombreDependencia')
+      .addSelect('vista.cupo_asignado', 'cupoAsignado')
+      .addSelect('vista.total_inscripciones', 'totalInscripciones')
+      .from('v_inscripciones_por_dependencia', 'vista');
+
+    if (idCurso !== undefined) {
+      query.where('vista.id_curso = :idCurso', { idCurso });
+    }
+
+    return query
+      .orderBy('vista.id_curso', 'ASC')
+      .addOrderBy('vista.id_nivel', 'ASC')
+      .addOrderBy('vista.nombre_dependencia', 'ASC')
+      .getRawMany<InscripcionesPorDependenciaRow>()
+      .then((rows) => {
+        const niveles = new Map<string, InscripcionesPorDependenciaNivel>();
+
+        for (const row of rows) {
+          const idCurso = Number(row.idCurso);
+          const idNivel = Number(row.idNivel);
+          const key = `${idCurso}:${idNivel}`;
+          let nivel = niveles.get(key);
+
+          if (!nivel) {
+            nivel = {
+              idCurso,
+              nombreCurso: row.nombreCurso,
+              idNivel,
+              nombreNivel: row.nombreNivel,
+              dependencias: [],
+            };
+            niveles.set(key, nivel);
+          }
+
+          nivel.dependencias.push({
+            idDependencias: Number(row.idDependencias),
+            nombreDependencia: row.nombreDependencia,
             cupoAsignado: Number(row.cupoAsignado),
             totalInscripciones: Number(row.totalInscripciones),
           });
